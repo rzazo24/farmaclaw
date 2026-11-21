@@ -34,11 +34,11 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 
 ## Cómo probar
 ```bash
-uv sync                                    # instalar dependencias
-uv run python mcp/cima/test_cima.py        # prueba CIMA con casos reales
-uv run python mcp/pubmed/lactmed.py         # crear/actualizar índice de LactMed
-uv run python mcp/pubmed/test_pubmed.py    # prueba PubMed y LactMed con casos reales
-uv run python mcp/elactancia/test_elactancia.py  # prueba e-lactancia
-claude mcp list                            # los tres deben salir "✔ Connected"
+uv sync                          # dependencias (incluye pytest)
+uv run python mcp/pubmed/lactmed.py   # crear/actualizar índice de LactMed
+uv run pytest                    # todas las pruebas (tests/)
+uv run pytest -m "not red"       # solo las que no llaman a APIs externas
+claude mcp list                  # los tres deben salir "✔ Connected"
 ```
+Al tocar un servidor, añade su prueba en `tests/`: las de parseo con datos de ejemplo (sin red) y las de API marcadas con `@pytest.mark.red`.
 Consulta de ejemplo en Claude Code: "¿Interacción entre omeprazol y clopidogrel?"

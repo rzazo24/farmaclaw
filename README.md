@@ -89,11 +89,12 @@ Están en `.claude/commands/` y todos delegan en el agente `research`.
 
 ## Pruebas
 ```bash
-uv run python mcp/cima/test_cima.py
-uv run python mcp/pubmed/test_pubmed.py
-uv run python mcp/elactancia/test_elactancia.py
-claude mcp list
+uv sync                          # instala también pytest (dependencia de desarrollo)
+uv run pytest                    # todas: sin red + llamadas reales a las APIs (~10 s)
+uv run pytest -m "not red"       # solo las que no usan red (instantáneas)
+claude mcp list                  # los tres servidores deben salir "✔ Connected"
 ```
+Las pruebas de LactMed con datos reales se saltan si no existe el índice local.
 
 ## Estructura
 ```
@@ -105,7 +106,7 @@ mcp/cima/server.py               MCP de CIMA (AEMPS)
 mcp/pubmed/server.py             MCP de PubMed (+ herramienta LactMed)
 mcp/pubmed/lactmed.py            descarga y búsqueda del índice local de LactMed
 mcp/elactancia/server.py         MCP de e-lactancia
-mcp/*/test_*.py                  pruebas rápidas con casos reales
+tests/                           pruebas pytest (sin red y con APIs reales)
 scripts/arrancar.sh              sesión tmux con Claude Code + Remote Control
 systemd/                         servicio de arranque y temporizador mensual de LactMed
 data/                            índices descargados (no se sube a git)

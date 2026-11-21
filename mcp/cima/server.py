@@ -109,6 +109,7 @@ def _limpiar_html(contenido: str) -> str:
     texto = html.unescape("".join(p.partes))
     texto = re.sub(r"[ \t\r\xa0]+", " ", texto)
     texto = re.sub(r" *\n *", "\n", texto)
+    texto = re.sub(r"•[ \t]*\n+[ \t]*(?=[^•\s])", "• ", texto)  # <li><p>texto</p>: unir viñeta y texto
     texto = re.sub(r"^•\s*$", "", texto, flags=re.M)  # viñetas vacías de listas anidadas
     return re.sub(r"\n{3,}", "\n\n", texto).strip()
 
