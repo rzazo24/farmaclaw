@@ -2,7 +2,7 @@
 
 [![Pruebas](https://github.com/rzazo24/farmaclaw/actions/workflows/pruebas.yml/badge.svg)](https://github.com/rzazo24/farmaclaw/actions/workflows/pruebas.yml)
 
-Agente de research para consejo farmacéutico dentro de Claude Code. Responde con información de **CIMA (AEMPS)**, **PubMed**, **LactMed** y **e-lactancia**, citando cada afirmación.
+Agente de research para consejo farmacéutico dentro de [Claude Code](https://claude.com/claude-code). Responde a preguntas de mostrador (interacciones, posología, embarazo, lactancia, problemas de suministro…) con información de **CIMA (AEMPS)**, **PubMed**, **LactMed** y **e-lactancia**, citando cada afirmación con su enlace. Pensado para usarse también desde el móvil con Remote Control.
 
 > [!WARNING]
 > **Herramienta de apoyo para profesionales sanitarios. No es un producto sanitario.**
@@ -11,48 +11,131 @@ Agente de research para consejo farmacéutico dentro de Claude Code. Responde co
 > - La decisión clínica es siempre responsabilidad del profesional.
 > - No introduzcas datos identificativos de pacientes.
 
-## Instalación (Ubuntu)
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh   # si no tienes uv
-cd ~/farmaclaw
-uv sync
+## Cómo funciona
+
+```mermaid
+flowchart LR
+    U["Farmacéutico<br/>(terminal o iPhone)"] --> C["Comando rápido<br/>/interaccion, /lactancia…"]
+    U --> A
+    C --> A["Agente research<br/>reglas de citación"]
+    A --> M1["MCP cima"] --> CIMA[("CIMA · AEMPS")]
+    A --> M2["MCP pubmed"] --> NCBI[("PubMed · NCBI")]
+    M2 --> LM[("LactMed<br/>índice local")]
+    A --> M3["MCP elactancia"] --> EL[("e-lactancia.org")]
 ```
 
-Opcional, para que PubMed permita 10 peticiones/s en vez de 3 (añadir a `~/.bashrc`):
+1. Haces una pregunta, directamente o con un comando rápido.
+2. El agente **research** decide qué consultar y llama a los **servidores MCP** del proyecto (programas en Python que Claude Code arranca solo).
+3. Cada servidor consulta su fuente y devuelve solo el fragmento pedido (p. ej. la sección 4.5 de una ficha técnica), siempre con su URL.
+4. El agente redacta la respuesta usando **solo** lo que ha leído, con una cita y enlace en cada afirmación.
+
+## Instalación (Ubuntu)
+
+Requisitos: [Claude Code](https://claude.com/claude-code) instalado y con sesión iniciada, `git` y `curl`.
+
 ```bash
-export NCBI_API_KEY=tu_clave     # https://www.ncbi.nlm.nih.gov/account/settings/
+git clone https://github.com/rzazo24/farmaclaw.git ~/farmaclaw
+cd ~/farmaclaw
+curl -LsSf https://astral.sh/uv/install.sh | sh   # gestor de Python (si no lo tienes)
+uv sync                                           # instala Python 3.11+ y las dependencias
+uv run python mcp/pubmed/lactmed.py               # crea el índice de LactMed (~1 min)
+```
+
+Opcional, clave del NCBI para que PubMed permita 10 peticiones/s en vez de 3 ([créala aquí](https://www.ncbi.nlm.nih.gov/account/settings/), en *API Key Management*). Añádela al final de `~/.bashrc`, nunca al repositorio:
+```bash
+export NCBI_API_KEY=tu_clave
 export NCBI_EMAIL=tu@correo
 ```
 
-### Índice de LactMed
-LactMed se descarga completo del FTP del NCBI (su web bloquea accesos automáticos) y se guarda en `data/lactmed.json.gz` (no se sube a git). Crearlo o actualizarlo (~1 min):
+### Primer arranque: aprobar los servidores MCP
 ```bash
-uv run python mcp/pubmed/lactmed.py
-```
-Actualización automática mensual (temporizador systemd de usuario):
-```bash
-ln -sf ~/farmaclaw/systemd/farmaclaw-lactmed.{service,timer} ~/.config/systemd/user/
-systemctl --user daemon-reload && systemctl --user enable --now farmaclaw-lactmed.timer
-systemctl --user list-timers farmaclaw-lactmed.timer    # próxima ejecución
-```
-
-## Uso
-```bash
-tmux new -s farmaclaw
 cd ~/farmaclaw && claude
 ```
-La primera vez, aprueba los servidores MCP del proyecto (o revisa `/mcp`). Después pregunta, por ejemplo:
+Claude Code pregunta si confías en los servidores de `.mcp.json` (`cima`, `pubmed`, `elactancia`): apruébalos. Compruébalo con `/mcp` (deben salir como *connected*) o, fuera de Claude, con `claude mcp list`. Si los rechazaste por error, actívalos desde `/mcp`.
 
-- "Usa el agente research: ¿interacción entre omeprazol y clopidogrel?"
-- "¿Se puede tomar ibuprofeno durante la lactancia?"
-- "¿Hay problemas de suministro de citicolina?"
+## Uso
 
-Desde el iPhone: activa `/remote-control` en la sesión de tmux.
+Escribe la pregunta en lenguaje natural o usa un comando rápido:
 
-### Arranque automático (siempre disponible en el móvil)
-> Los servicios de `systemd/` asumen que el proyecto está en `~/farmaclaw`. Si lo clonas en otra ruta, ajusta `%h/farmaclaw` en los `.service`.
+| Comando | Ejemplo | Qué hace |
+|---|---|---|
+| `/interaccion` | `/interaccion omeprazol clopidogrel` | Lee la sección 4.5 de **todos** los fármacos (admite 3 o más) y analiza cada pareja: mecanismo, relevancia clínica y manejo |
+| `/embarazo` | `/embarazo ibuprofeno tercer trimestre` | Ficha técnica 4.6 (y 4.3), notas de seguridad de la AEMPS y metaanálisis de los últimos 10 años |
+| `/lactancia` | `/lactancia sertralina` | Cruza e-lactancia (nivel de riesgo), LactMed y la ficha 4.6; muestra las tres posturas si difieren |
+| `/dosis` | `/dosis ibuprofeno niños 15 kg` | Ficha 4.2; con peso, calcula la dosis paso a paso (mg/kg × peso) y la máxima; ajustes renal/hepático |
+| `/suministro` | `/suministro citicolina` | Problemas activos con fechas y observaciones, y presentaciones alternativas sin problemas |
 
-Un servicio de systemd de usuario abre al encender la VM una sesión tmux `farmaclaw` con `claude --remote-control Farmaclaw`. Si la sesión ya existe, no hace nada.
+Ejemplos de preguntas libres:
+- "¿Qué dice la ficha técnica del clopidogrel sobre el omeprazol?"
+- "¿Hay metaanálisis recientes sobre IBP y clopidogrel?"
+- "¿Qué es el CN 712729?"
+
+Cada consulta completa tarda **1-2 minutos**: el agente lee varias fichas y artículos antes de responder.
+
+Desde el iPhone: activa `/remote-control` en la sesión (o usa el [arranque automático](#arranque-automático-siempre-disponible-en-el-móvil)) y abre la sesión en la app de Claude.
+
+## El agente `research`
+
+Definido en `.claude/agents/research.md`. Solo tiene acceso a las herramientas de los tres servidores MCP (ni web ni archivos), y sigue estas reglas:
+
+- **Solo lo que ha leído.** Responde únicamente con información obtenida de las herramientas en esa conversación. Si no la encuentra, dice *"No he encontrado evidencia"* y explica qué buscó. Si una API falla, lo dice en vez de suponer.
+- **Una cita por afirmación clínica**, con enlace: `[CIMA: nombre, sección X]`, `[PMID: 12345678]`, `[LactMed: fármaco]`, `[e-lactancia: producto]`. No cita un artículo sin haber leído su resumen.
+- **Prioridad de fuentes:** ficha técnica de CIMA (lo autorizado en España) → metaanálisis y revisiones sistemáticas → ensayos clínicos → casos clínicos (solo como apoyo). Si la evidencia y la ficha difieren, muestra ambas.
+- **Interacciones:** lee la sección 4.5 de ambos fármacos; explica mecanismo, relevancia clínica y manejo práctico; termina siempre con *"No detectar una interacción aquí no garantiza que no exista; contrastar con Bot PLUS"*.
+- **Lactancia:** consulta e-lactancia, LactMed y la ficha 4.6, empezando por el nivel de riesgo de e-lactancia.
+- **Seguridad:** revisa las notas de seguridad de la AEMPS y los materiales informativos cuando existen (pueden ser más recientes que la ficha).
+- **Lee completo:** las secciones largas llegan por partes y no dice que algo "no consta" sin leerlas todas.
+- **Formato móvil:** respuesta breve (2-4 frases), después detalle en viñetas y referencias.
+- **Privacidad:** nunca pide ni guarda datos identificativos de pacientes.
+
+## Herramientas
+
+### `cima`: CIMA (AEMPS)
+| Herramienta | Qué hace | Detalles |
+|---|---|---|
+| `buscar_medicamento` | Busca medicamentos autorizados en España | Acepta nombre comercial, principio activo, código nacional (CN, también con dígito de control: `712729.8`) o nº de registro. Busca a la vez por nombre y por principio activo (así salen genéricos y marcas). Muestra hasta 15, primero los comercializados que empiezan por lo buscado |
+| `ficha_tecnica_seccion` | Una sección de la ficha técnica | Por número (`4.2`, `4.5`…) o alias (`posologia`, `contraindicaciones`, `interacciones`, `embarazo`, `reacciones adversas`…). Texto limpio, sin HTML |
+| `prospecto_seccion` | Una sección del prospecto (1-6) | Alias: `qué es`, `antes de tomar`, `cómo tomar`, `efectos adversos`, `conservación`, `composición` |
+| `problemas_suministro` | Problemas de suministro por presentación | Acepta nombre, principio activo, nº de registro o CN. Estado, fecha de inicio, fin prevista y observaciones |
+| `notas_seguridad` | Notas informativas de seguridad de la AEMPS | Más recientes primero, con enlace a cada nota |
+| `materiales_informativos` | Guías de seguridad aprobadas por la AEMPS | Para profesionales y pacientes (guías, tarjetas, formularios) |
+
+Las secciones de más de 8.000 caracteres se devuelven **por partes** (`parte=1, 2…`, con `total_partes`), cortando por párrafos.
+
+### `pubmed`: PubMed y LactMed (NCBI)
+| Herramienta | Qué hace | Detalles |
+|---|---|---|
+| `buscar_articulos` | Búsqueda en PubMed por relevancia | Filtros opcionales: tipo (`Meta-Analysis`, `Systematic Review`, `Randomized Controlled Trial`, `Review`, `Case Reports`) y año mínimo. Devuelve la consulta exacta usada, para repetirla en la web |
+| `obtener_resumen` | Abstract y metadatos (hasta 10 PMIDs) | Autores abreviados, revista, año, abstract por apartados, MeSH, DOI y enlace al texto completo en PMC si existe |
+| `lactmed` | LactMed: fármacos y lactancia | Nombre en **inglés** (acepta equivalencias habituales: paracetamol → acetaminophen, salbutamol → albuterol, metamizol → dipyrone…). Secciones: `resumen` (con alternativas y clase), `niveles`, `efectos_lactante`, `efectos_lactancia`, `alternativas`. Las citas aparecen como `[PMID: …]` |
+
+LactMed se consulta desde un **índice local** (`data/lactmed.json.gz`, ~1,4 MB, no se sube a git): su web bloquea los accesos automáticos, así que se usa la descarga oficial completa del FTP del NCBI.
+
+### `elactancia`: e-lactancia.org (APILAM)
+| Herramienta | Qué hace | Detalles |
+|---|---|---|
+| `elactancia` | Compatibilidad con la lactancia | Principio activo en **español** (para marcas, buscar antes el principio activo en CIMA). Nivel de riesgo de 0 (compatible) a 3 (incompatible), comentario con referencias, alternativas más seguras si las hay y fecha de actualización |
+
+e-lactancia no tiene API pública: se usa su buscador interno y se lee la ficha, solo cuando se pregunta (1 petición/s, caché 24 h), nunca con descargas masivas.
+
+### Comportamiento común
+- Respuestas compactas: nunca documentos enteros, solo lo pedido, y siempre con un campo `fuente` (URL pública).
+- Errores claros en español (no encontrado, API caída, timeout). Timeout de 15 s y un reintento.
+- Caché en memoria (1 h; 24 h en e-lactancia).
+
+## Limitaciones conocidas
+- **Tiempo:** cada consulta completa tarda 1-2 minutos.
+- **Ámbito:** CIMA cubre medicamentos autorizados en España; no incluye productos sanitarios ni la mayoría de complementos alimenticios.
+- **Búsqueda en CIMA:** con principios activos muy comunes (más de 100 presentaciones) solo se muestran 15; para una marca concreta, búscala por su nombre.
+- **Fichas técnicas:** pueden tardar en actualizarse; por eso el agente revisa también las notas de seguridad.
+- **LactMed:** el índice local se actualiza una vez al mes (o a mano). Los nombres van en inglés.
+- **e-lactancia:** no resuelve bien las marcas comerciales; la fecha de cada ficha indica su última revisión.
+- **No hay acceso** a Bot PLUS, Pediamécum, UpToDate ni otras bases de suscripción: para interacciones, el agente recuerda siempre contrastar con Bot PLUS.
+
+## Arranque automático (siempre disponible en el móvil)
+
+Un servicio de systemd de usuario abre al encender la VM una sesión tmux `farmaclaw` con `claude --remote-control Farmaclaw`, que aparece en la app de Claude. Si la sesión ya existe, no hace nada; espera hasta 2 minutos a que haya red.
+
 ```bash
 # Instalación (una vez; requiere linger: `loginctl enable-linger $USER`)
 mkdir -p ~/.config/systemd/user
@@ -64,46 +147,32 @@ tmux attach -t farmaclaw                  # entrar a la sesión desde SSH
 systemctl --user status farmaclaw         # ver el estado del servicio
 ```
 
-## Comandos rápidos (pensados para el móvil)
-| Comando | Ejemplo | Qué hace |
-|---|---|---|
-| `/interaccion` | `/interaccion omeprazol clopidogrel` | Lee la 4.5 de todos los fármacos; mecanismo, relevancia y manejo |
-| `/embarazo` | `/embarazo ibuprofeno tercer trimestre` | Ficha 4.6 + metaanálisis recientes |
-| `/lactancia` | `/lactancia sertralina` | e-lactancia + LactMed + ficha 4.6 |
-| `/dosis` | `/dosis ibuprofeno niños 15 kg` | Ficha 4.2, con cálculo por peso y ajustes renal/hepático |
-| `/suministro` | `/suministro citicolina` | Problemas activos, fechas y alternativas comercializadas |
+> - La sesión se abre con `bash -i`, que carga `~/.bashrc`: la clave del NCBI tiene que estar ahí para que la use.
+> - Los servicios de `systemd/` asumen que el proyecto está en `~/farmaclaw`. Si lo clonas en otra ruta, ajusta `%h/farmaclaw` en los `.service`.
 
-Están en `.claude/commands/` y todos delegan en el agente `research`.
-
-## Herramientas
-| Servidor | Herramienta | Qué hace |
-|---|---|---|
-| cima | `buscar_medicamento` | Busca por nombre, principio activo o código nacional (CN) |
-| cima | `ficha_tecnica_seccion` | Una sección de la ficha técnica (4.2, 4.5, "interacciones"…) |
-| cima | `prospecto_seccion` | Una sección del prospecto (1-6) |
-| cima | `problemas_suministro` | Estado y fechas por presentación |
-| cima | `notas_seguridad` | Notas informativas de seguridad de la AEMPS |
-| cima | `materiales_informativos` | Guías de seguridad para profesionales y pacientes |
-| pubmed | `buscar_articulos` | Búsqueda con filtros de tipo y año |
-| pubmed | `obtener_resumen` | Abstract, MeSH, DOI y enlace a PMC |
-| elactancia | `elactancia` | e-lactancia.org: nivel de riesgo en lactancia (0-3), comentario y alternativas |
-| pubmed | `lactmed` | LactMed: uso en lactancia, niveles en leche, efectos en el lactante, alternativas |
+### Actualización mensual de LactMed
+```bash
+ln -sf ~/farmaclaw/systemd/farmaclaw-lactmed.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now farmaclaw-lactmed.timer
+systemctl --user list-timers farmaclaw-lactmed.timer    # próxima ejecución
+```
+Se ejecuta el día 1 de cada mes; si la VM estaba apagada, al arrancar.
 
 ## Pruebas
 ```bash
-uv sync                          # instala también pytest (dependencia de desarrollo)
 uv run pytest                    # todas: sin red + llamadas reales a las APIs (~10 s)
 uv run pytest -m "not red"       # solo las que no usan red (instantáneas)
 claude mcp list                  # los tres servidores deben salir "✔ Connected"
 ```
-Las pruebas de LactMed con datos reales se saltan si no existe el índice local.
+- **Sin red:** comprueban el procesado de datos (HTML de CIMA, XML de PubMed y LactMed, fichas de e-lactancia, fechas, división por partes) con ejemplos fijos.
+- **Con red** (`@pytest.mark.red`): casos reales contra las APIs (p. ej. que la ficha del clopidogrel mencione el omeprazol en la 4.5). Las de LactMed con datos reales se saltan si no existe el índice local.
 
-En GitHub Actions (`.github/workflows/pruebas.yml`) las pruebas sin red se ejecutan en cada push y PR; las de red, en cada push a `main`, cada lunes y a mano desde la pestaña *Actions*.
+En GitHub Actions (`.github/workflows/pruebas.yml`) las pruebas sin red se ejecutan en cada push y PR; las de red, en cada push a `main`, **cada lunes** (para detectar cambios en las APIs) y a mano desde la pestaña *Actions*. Si algo falla, GitHub avisa por correo.
 
 ## Estructura
 ```
 .mcp.json                        servidores MCP del proyecto
-CLAUDE.md                        contexto para Claude Code
+CLAUDE.md                        contexto e instrucciones para Claude Code
 .claude/agents/research.md       agente farmacéutico investigador
 .claude/commands/                comandos rápidos (/interaccion, /dosis, /lactancia…)
 mcp/cima/server.py               MCP de CIMA (AEMPS)
@@ -113,13 +182,16 @@ mcp/elactancia/server.py         MCP de e-lactancia
 tests/                           pruebas pytest (sin red y con APIs reales)
 scripts/arrancar.sh              sesión tmux con Claude Code + Remote Control
 systemd/                         servicio de arranque y temporizador mensual de LactMed
+.github/workflows/pruebas.yml    integración continua (GitHub Actions)
 data/                            índices descargados (no se sube a git)
 ```
 
-## Licencia
-El código de Farmaclaw se distribuye bajo licencia [MIT](LICENSE). La licencia cubre solo el código: los datos que consultan los servidores siguen las condiciones de cada fuente (abajo).
+Para añadir o cambiar una herramienta, `CLAUDE.md` recoge las reglas de los servidores y las particularidades comprobadas de cada API.
 
-## Licencias de las fuentes
+## Licencia
+El código de Farmaclaw se distribuye bajo licencia [MIT](LICENSE). La licencia cubre solo el código: los datos que consultan los servidores siguen las condiciones de cada fuente.
+
+### Licencias de las fuentes
 - **e-lactancia.org** (APILAM): CC BY-NC-SA 4.0. Uso no comercial y con atribución. El servidor consulta solo bajo demanda (1 petición/s, caché 24 h), sin descargas masivas.
 - **LactMed** (NIH/NICHD) y **PubMed**: dominio público / uso libre de E-utilities según las normas del NCBI.
 - **CIMA** (AEMPS): API pública oficial.
