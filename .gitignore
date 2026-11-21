@@ -1,0 +1,10 @@
+# Entorno virtual y caché de Python (se regeneran con `uv sync`)
+.venv/
+__pycache__/
+*.pyc
+
+# Ajustes locales de Claude Code (aprobaciones de MCP de esta máquina)
+.claude/settings.local.json
+
+# Secretos
+.env
