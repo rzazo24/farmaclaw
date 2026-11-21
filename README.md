@@ -22,6 +22,12 @@ LactMed se descarga completo del FTP del NCBI (su web bloquea accesos automátic
 ```bash
 uv run python mcp/pubmed/lactmed.py
 ```
+Actualización automática mensual (temporizador systemd de usuario):
+```bash
+ln -sf ~/farmaclaw/systemd/farmaclaw-lactmed.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now farmaclaw-lactmed.timer
+systemctl --user list-timers farmaclaw-lactmed.timer    # próxima ejecución
+```
 
 ## Uso
 ```bash

@@ -1,0 +1,7 @@
+[Unit]
+Description=Farmaclaw: actualizar el índice local de LactMed
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/farmaclaw
+ExecStart=%h/.local/bin/uv run python mcp/pubmed/lactmed.py

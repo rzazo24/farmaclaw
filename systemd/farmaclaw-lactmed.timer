@@ -1,0 +1,11 @@
+[Unit]
+Description=Farmaclaw: actualizar LactMed cada mes
+
+[Timer]
+OnCalendar=monthly
+RandomizedDelaySec=6h
+# Si la VM estaba apagada en la fecha prevista, se ejecuta al arrancar.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
