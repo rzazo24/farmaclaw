@@ -347,3 +347,10 @@ def test_anclaje_acepta_solo_citas_literales_con_url_devuelta():
     ], fuentes)
     assert [v["criterio"] for v in validos] == ["ok"]
     assert [d["motivo"] for d in descartados] == ["cita no literal", "URL no devuelta por ninguna herramienta"]
+
+
+def test_lista_rapido_apunta_a_casos_existentes():
+    import yaml
+    datos = yaml.safe_load(ev.CASOS.read_text())
+    ids = {c["id"] for c in datos["casos"]}
+    assert datos["rapido"] and set(datos["rapido"]) <= ids

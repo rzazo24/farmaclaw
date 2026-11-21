@@ -12,6 +12,7 @@ Desde la raíz del proyecto:
 uv run python evaluacion/ejecutar.py --caso int-omeprazol-clopidogrel       # un caso
 uv run python evaluacion/ejecutar.py --caso lac-ibuprofeno --caso sum-por-cn # varios
 uv run python evaluacion/ejecutar.py --categoria lactancia                   # una categoría
+uv run python evaluacion/ejecutar.py --rapido                                # test rápido: 5 casos representativos
 uv run python evaluacion/ejecutar.py --todos                                 # todos los casos
 uv run python evaluacion/ejecutar.py --todos --sin-juez                      # sin juez: solo comprobaciones automáticas
 uv run python evaluacion/ejecutar.py --solo-juez evaluacion/resultados/2026-11-21_182359   # rejuzgar sin repetir consultas
@@ -50,7 +51,12 @@ anclado: '2026-11-21'
 - Escribe en `casos.yaml` conservando comentarios y formato.
 
 - Los casos se ejecutan **de uno en uno**, para no saturar CIMA, el NCBI ni e-lactancia.
-- Cada caso tarda 1-2 minutos y cuesta del orden de 0,2-0,6 USD de uso de Claude: `--todos` son unos 30-40 minutos.
+- Cada caso tarda 1-2 minutos. El coste lo pone el agente (unos 0,2-0,6 USD equivalentes por caso); el juez es ~0,03 USD por caso.
+- **Con la suscripción Pro** (medido el 21/11/2026): 5 casos ≈ 15-18 % de la ventana de 5 horas; la evaluación completa ≈ 70-80 %. Úsala así:
+  - tras cada cambio, `--rapido` o la categoría afectada;
+  - la completa, solo tras cambios grandes y cuando no necesites Claude (o repartida por categorías);
+  - al cambiar criterios, `--solo-juez` (≈ 1 %).
+- La lista del test rápido está en `rapido:` al principio de `casos.yaml`.
 - Requiere tener aprobados los servidores MCP del proyecto (ver el README principal).
 
 Categorías: `interaccion`, `lactancia`, `embarazo`, `posologia`, `contraindicacion`, `suministro`, `reacciones_adversas`, `sin_evidencia`.

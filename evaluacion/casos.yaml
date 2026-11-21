@@ -15,6 +15,14 @@
 # conocimiento general, NO de las fuentes. No es verdad comprobada: hay que validarlo
 # contra la ficha técnica / LactMed / e-lactancia antes de poner revisado: true.
 
+# Test rápido (--rapido): un caso por tipo importante, ~15-18 % de la ventana de 5 h en Pro.
+rapido:
+  - int-omeprazol-clopidogrel
+  - lac-amiodarona
+  - emb-valproico
+  - pos-ibuprofeno-nino-15kg
+  - trampa-farmaco-inexistente
+
 casos:
 
   # ───────────────────────── Interacciones (5) ─────────────────────────
@@ -43,7 +51,8 @@ casos:
     no_debe:
       - "Confundir omeprazol con esomeprazol al elegir la ficha"
       - "Recomendar separar las tomas como solución"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -65,7 +74,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/64185/FT_64185.html
     no_debe:
       - "Presentarlo como una interacción menor"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -91,7 +101,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/25670/FT_25670.html
     no_debe:
       - "Recomendar ibuprofeno sin advertencias"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -110,7 +121,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/64014/FT_64014.html
     no_debe:
       - "Decir que no hay interacción"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -138,7 +150,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/39059/FT_39059.html
     no_debe:
       - "Analizar solo una pareja de las tres posibles"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -167,7 +180,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
     no_debe:
       - "Recomendar suspender la lactancia"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -196,7 +210,8 @@ casos:
         fuente: https://www.e-lactancia.org/breastfeeding/sertraline-hydrochloride/product/
     no_debe:
       - "Recomendar suspender la lactancia"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -226,7 +241,8 @@ casos:
         fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM347/
     no_debe:
       - "Presentarla como totalmente segura"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -256,7 +272,8 @@ casos:
         fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM10/
     no_debe:
       - "Ocultar que las fuentes difieren"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -287,7 +304,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
     no_debe:
       - "Distinguir trimestres 'seguros'"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -312,7 +330,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
     no_debe:
       - "Dispensarlo sin advertencia"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -337,7 +356,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/63355/FT_63355.html
     no_debe:
       - "Decir que puede seguir igual"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -389,7 +409,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/70310/FT_70310.html
     no_debe:
       - "Dar 4 g/día sin ajustar por peso"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -417,7 +438,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
     no_debe:
       - "Decir que puede seguir con la misma dosis"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true
@@ -444,7 +466,8 @@ casos:
         fuente: https://cima.aemps.es/cima/dochtml/ft/82601/FT_82601.html
     no_debe:
       - "Recomendar suspender la estatina por su cuenta"
-      - "Afirmar algo sin cita"
+      - "No explica mecanismos ni da datos clínicos sin una cita que los respalde"
+      - "Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)"
     anclado: '2026-11-21'
     revisado_fecha: '2026-11-21'
     revisado: true

@@ -11,7 +11,7 @@ Todos se registran en `.mcp.json` y Claude Code los arranca solo.
 ## Consultas clínicas
 Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`) y **devuelve su respuesta tal cual**: sin resumirla, sin reformularla ("el agente dice…") y sin añadir información propia, que no tendría cita. Si quieres comentar algo (p. ej. una mejora del proyecto), sepáralo claramente después de la respuesta. Reglas del agente:
 - Solo información obtenida de las herramientas en la conversación; si no la hay: "No he encontrado evidencia".
-- Cada afirmación clínica con cita y enlace: [CIMA: nombre, sección X] o [PMID: 12345678].
+- Cada afirmación clínica con cita y enlace: [CIMA: nombre, sección X] o [PMID: 12345678]. Nada de mecanismos o datos sin fuente; los consejos prácticos van marcados como "Consejo práctico (no procede de las fuentes)".
 - Prioridad: ficha técnica CIMA > metaanálisis/revisiones sistemáticas > ensayos > casos clínicos (solo apoyo).
 - Interacciones: leer la 4.5 de ambos fármacos; mecanismo, relevancia y manejo; aviso de contrastar con Bot PLUS.
 - Formato móvil: respuesta breve (2-4 frases), detalle y referencias.
@@ -41,6 +41,6 @@ uv run pytest -m "not red"       # solo las que no llaman a APIs externas
 claude mcp list                  # los tres deben salir "✔ Connected"
 ```
 Al tocar un servidor, añade su prueba en `tests/`: las de parseo con datos de ejemplo (sin red) y las de API marcadas con `@pytest.mark.red`.
-Al cambiar el prompt del agente, un comando o un servidor, ejecuta la evaluación (`evaluacion/README.md`), p. ej. `uv run python evaluacion/ejecutar.py --categoria interaccion`. Los criterios de `evaluacion/casos.yaml` los valida un farmacéutico (`revisado: true`): no los cambies ni los marques como revisados por tu cuenta.
+Al cambiar el prompt del agente, un comando o un servidor, ejecuta la evaluación (`evaluacion/README.md`): `--rapido` (5 casos) o la categoría afectada. Con la suscripción Pro, 5 casos consumen ~15-18 % de la ventana de 5 h y la evaluación completa ~70-80 %: no la lances sin que el usuario lo pida. Los criterios de `evaluacion/casos.yaml` los valida un farmacéutico (`revisado: true`): no los cambies ni los marques como revisados por tu cuenta.
 
 Consulta de ejemplo en Claude Code: "¿Interacción entre omeprazol y clopidogrel?"

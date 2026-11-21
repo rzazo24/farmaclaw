@@ -4,6 +4,7 @@ Uso (desde la raíz del proyecto):
     uv run python evaluacion/ejecutar.py --caso int-omeprazol-clopidogrel
     uv run python evaluacion/ejecutar.py --categoria lactancia
     uv run python evaluacion/ejecutar.py --todos
+    uv run python evaluacion/ejecutar.py --rapido                  # 5 casos representativos
     uv run python evaluacion/ejecutar.py --todos --sin-juez        # solo comprobaciones automáticas
     uv run python evaluacion/ejecutar.py --solo-juez evaluacion/resultados/2026-11-21_181034
 
@@ -575,6 +576,7 @@ def main():
     g.add_argument("--caso", action="append", metavar="ID", help="id de un caso (repetible)")
     g.add_argument("--categoria", metavar="X", help="todos los casos de una categoría")
     g.add_argument("--todos", action="store_true", help="todos los casos")
+    g.add_argument("--rapido", action="store_true", help="test rápido: los casos de la lista «rapido» de casos.yaml")
     g.add_argument("--solo-juez", metavar="CARPETA", type=Path,
                    help="vuelve a juzgar una ejecución guardada, sin repetir las consultas al agente")
     g.add_argument("--aceptar", metavar="CASO:ID",
@@ -594,9 +596,12 @@ def main():
     if args.aceptar:
         return aceptar(args.aceptar, args.motivo)
     segunda = None if args.segunda_opinion.lower() == "no" else args.segunda_opinion
-    casos = yaml.safe_load(args.casos.read_text())["casos"]
+    datos = yaml.safe_load(args.casos.read_text())
+    casos = datos["casos"]
     if args.solo_juez:
         return solo_juez(args.solo_juez, casos, args.modelo_juez, segunda, args.comparar)
+    if args.rapido:
+        args.caso = datos.get("rapido") or sys.exit("casos.yaml no tiene lista «rapido».")
     if args.caso:
         desconocidos = set(args.caso) - {c["id"] for c in casos}
         if desconocidos:
