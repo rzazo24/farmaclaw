@@ -30,6 +30,17 @@ La primera vez, aprueba los servidores MCP del proyecto (o revisa `/mcp`). Despu
 
 Desde el iPhone: activa `/remote-control` en la sesión de tmux.
 
+## Comandos rápidos (pensados para el móvil)
+| Comando | Ejemplo | Qué hace |
+|---|---|---|
+| `/interaccion` | `/interaccion omeprazol clopidogrel` | Lee la 4.5 de todos los fármacos; mecanismo, relevancia y manejo |
+| `/embarazo` | `/embarazo ibuprofeno tercer trimestre` | Ficha 4.6 + metaanálisis recientes |
+| `/lactancia` | `/lactancia sertralina` | Ficha 4.6 + datos de paso a leche |
+| `/dosis` | `/dosis ibuprofeno niños 15 kg` | Ficha 4.2, con cálculo por peso y ajustes renal/hepático |
+| `/suministro` | `/suministro citicolina` | Problemas activos, fechas y alternativas comercializadas |
+
+Están en `.claude/commands/` y todos delegan en el agente `research`.
+
 ## Herramientas
 | Servidor | Herramienta | Qué hace |
 |---|---|---|
