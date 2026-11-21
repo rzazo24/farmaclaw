@@ -1,0 +1,38 @@
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"  # lunes 06:17 UTC: detecta cambios en las APIs externas
+  workflow_dispatch:       # botón "Run workflow" en GitHub
+
+jobs:
+  sin-red:
+    name: Sin red (parseo y lógica)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.9"
+      - run: uv sync --locked
+      - run: uv run pytest -m "not red" -v
+
+  con-red:
+    name: Con red (CIMA, PubMed, e-lactancia)
+    # Solo en main, semanal o manual: no en cada rama ni PR, para no cargar las APIs.
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+    needs: sin-red
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.9"
+      - run: uv sync --locked
+      # Las pruebas de LactMed con datos reales se saltan: el índice (~200 MB de descarga) no se genera aquí.
+      - run: uv run pytest -v
+        env:
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+          NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}

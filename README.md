@@ -1,5 +1,7 @@
 # Farmaclaw
 
+[![Pruebas](https://github.com/rzazo24/farmaclaw/actions/workflows/pruebas.yml/badge.svg)](https://github.com/rzazo24/farmaclaw/actions/workflows/pruebas.yml)
+
 Agente de research para consejo farmacéutico dentro de Claude Code. Responde con información de **CIMA (AEMPS)**, **PubMed**, **LactMed** y **e-lactancia**, citando cada afirmación.
 
 > [!WARNING]
@@ -95,6 +97,8 @@ uv run pytest -m "not red"       # solo las que no usan red (instantáneas)
 claude mcp list                  # los tres servidores deben salir "✔ Connected"
 ```
 Las pruebas de LactMed con datos reales se saltan si no existe el índice local.
+
+En GitHub Actions (`.github/workflows/pruebas.yml`) las pruebas sin red se ejecutan en cada push y PR; las de red, en cada push a `main`, cada lunes y a mano desde la pestaña *Actions*.
 
 ## Estructura
 ```
