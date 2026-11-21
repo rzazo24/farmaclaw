@@ -169,6 +169,9 @@ claude mcp list                  # los tres servidores deben salir "✔ Connecte
 
 En GitHub Actions (`.github/workflows/pruebas.yml`) las pruebas sin red se ejecutan en cada push y PR; las de red, en cada push a `main`, **cada lunes** (para detectar cambios en las APIs) y a mano desde la pestaña *Actions*. Si algo falla, GitHub avisa por correo.
 
+## Evaluación del agente
+Además de las pruebas, `evaluacion/` lanza 21 preguntas reales (interacciones, lactancia, embarazo, posología, suministro, trampas sin evidencia y privacidad), comprueba automáticamente herramientas consultadas, citas (incluidas citas inventadas) y avisos, y genera un informe para revisión manual por un farmacéutico. Ver [evaluacion/README.md](evaluacion/README.md).
+
 ## Estructura
 ```
 .mcp.json                        servidores MCP del proyecto
@@ -180,6 +183,7 @@ mcp/pubmed/server.py             MCP de PubMed (+ herramienta LactMed)
 mcp/pubmed/lactmed.py            descarga y búsqueda del índice local de LactMed
 mcp/elactancia/server.py         MCP de e-lactancia
 tests/                           pruebas pytest (sin red y con APIs reales)
+evaluacion/                      evaluación del agente: casos reales, informe y revisión manual
 scripts/arrancar.sh              sesión tmux con Claude Code + Remote Control
 systemd/                         servicio de arranque y temporizador mensual de LactMed
 .github/workflows/pruebas.yml    integración continua (GitHub Actions)

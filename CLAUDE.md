@@ -41,4 +41,6 @@ uv run pytest -m "not red"       # solo las que no llaman a APIs externas
 claude mcp list                  # los tres deben salir "✔ Connected"
 ```
 Al tocar un servidor, añade su prueba en `tests/`: las de parseo con datos de ejemplo (sin red) y las de API marcadas con `@pytest.mark.red`.
+Al cambiar el prompt del agente, un comando o un servidor, ejecuta la evaluación (`evaluacion/README.md`), p. ej. `uv run python evaluacion/ejecutar.py --categoria interaccion`.
+
 Consulta de ejemplo en Claude Code: "¿Interacción entre omeprazol y clopidogrel?"

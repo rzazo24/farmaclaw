@@ -11,3 +11,6 @@ __pycache__/
 
 # Índices descargados (se regeneran con sus scripts)
 data/
+
+# Resultados de la evaluación (una carpeta por ejecución)
+evaluacion/resultados/
