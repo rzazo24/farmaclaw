@@ -31,6 +31,7 @@ CASOS = Path(__file__).with_name("casos.yaml")
 JUEZ = Path(__file__).with_name("juez.md")
 ACEPTADOS = Path(__file__).with_name("aceptados.yaml")
 RESULTADOS = Path(__file__).with_name("resultados")
+EJECUCION = re.compile(r"\d{4}-\d{2}-\d{2}_\d{6}")  # nombre de carpeta de una ejecución real
 TIMEOUT_CASO = 600  # s; una consulta normal tarda 1-2 min
 
 # Igual que en uso real: el agente principal delega en research, que llama a los MCP.
@@ -363,8 +364,10 @@ def problemas(r: dict, aceptados: set[tuple[str, str]]) -> dict[str, str]:
 
 def linea_base(carpeta: Path, id_: str, explicita: Path | None = None) -> tuple[dict | None, str | None]:
     """Resultado del mismo caso en la ejecución anterior (o en la carpeta indicada)."""
+    # Solo ejecuciones reales (AAAA-MM-DD_HHMMSS): las carpetas de pruebas (_manipulada...) no cuentan.
     candidatas = [explicita] if explicita else sorted(
-        (d for d in RESULTADOS.iterdir() if d.is_dir() and d.name < carpeta.name), reverse=True)
+        (d for d in RESULTADOS.iterdir() if d.is_dir() and EJECUCION.fullmatch(d.name) and d.name < carpeta.name),
+        reverse=True)
     for d in candidatas:
         f = d / f"{id_}.json"
         if f.exists():

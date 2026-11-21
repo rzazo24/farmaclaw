@@ -302,6 +302,15 @@ def test_informe_separa_nuevos_de_ya_vistos(tmp_path, monkeypatch):
     assert "Comparado con: 2026-01-01_000000" in texto
 
 
+def test_linea_base_ignora_carpetas_de_prueba(tmp_path, monkeypatch):
+    monkeypatch.setattr(ev, "RESULTADOS", tmp_path)
+    for nombre in ("2026-01-01_000000", "2026-01-01_000000_manipulada"):
+        (tmp_path / nombre).mkdir()
+        (tmp_path / nombre / "x.json").write_text(json.dumps({"id": "x", "marca": nombre}))
+    base, nombre = ev.linea_base(tmp_path / "2026-01-02_000000", "x")
+    assert nombre == "2026-01-01_000000"
+
+
 def test_aceptar_y_que_no_vuelva_a_salir(tmp_path, monkeypatch):
     monkeypatch.setattr(ev, "RESULTADOS", tmp_path)
     monkeypatch.setattr(ev, "ACEPTADOS", tmp_path / "aceptados.yaml")
