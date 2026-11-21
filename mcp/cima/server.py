@@ -186,7 +186,22 @@ def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: boo
     }
 
 
-def _seccion(nregistro: str, seccion: str, tipo: str) -> dict:
+def _partir(texto: str) -> list[str]:
+    """Divide el texto en partes de hasta MAX_CHARS, cortando por párrafos cuando se puede."""
+    partes = []
+    while len(texto) > MAX_CHARS:
+        corte = texto.rfind("\n\n", 0, MAX_CHARS)
+        if corte < MAX_CHARS // 2:  # sin párrafo razonable: cortar por línea o a pelo
+            corte = texto.rfind("\n", 0, MAX_CHARS)
+            if corte < MAX_CHARS // 2:
+                corte = MAX_CHARS
+        partes.append(texto[:corte].strip())
+        texto = texto[corte:].strip()
+    partes.append(texto)
+    return partes
+
+
+def _seccion(nregistro: str, seccion: str, tipo: str, parte: int = 1) -> dict:
     alias = ALIAS_FICHA if tipo == "ficha" else ALIAS_PROSPECTO
     seccion = alias.get(seccion.strip().lower(), seccion.strip())
     tipo_doc = TIPO_DOC[tipo]
@@ -206,39 +221,49 @@ def _seccion(nregistro: str, seccion: str, tipo: str) -> dict:
         raise ToolError(f"No existe la sección «{seccion}» en {'la' if tipo == 'ficha' else 'el'} {nombre_doc} de {med['nombre']}. Disponibles: {disponibles}")
 
     texto = "\n\n".join(_limpiar_html(s.get("contenido", "")) for s in data)
-    recortado = len(texto) > MAX_CHARS
+    partes = _partir(texto)
+    if not 1 <= parte <= len(partes):
+        raise ToolError(f"La sección {seccion} tiene {len(partes)} parte(s); has pedido la parte {parte}.")
+    aviso = ""
+    if parte < len(partes):
+        aviso = f"\n[… continúa: pide parte={parte + 1} de {len(partes)} para leer el resto]"
     return {
         "medicamento": med["nombre"],
         "nregistro": med["nregistro"],
         "documento": nombre_doc,
         "seccion": data[0].get("seccion", seccion),
         "titulo": data[0].get("titulo"),
-        "texto": texto[:MAX_CHARS] + ("\n[… texto recortado; ver documento completo en la fuente]" if recortado else ""),
+        "parte": parte,
+        "total_partes": len(partes),
+        "texto": partes[parte - 1] + aviso,
         "fecha_documento": _fecha(doc.get("fecha")),
         "fuente": fuente,
     }
 
 
 @mcp.tool()
-def ficha_tecnica_seccion(nregistro: str, seccion: str) -> dict:
+def ficha_tecnica_seccion(nregistro: str, seccion: str, parte: int = 1) -> dict:
     """Devuelve el texto de una sección de la ficha técnica de un medicamento.
 
     seccion: número ("4.2", "4.3", "4.5", "4.6", "4.8"...) o alias
     ("posologia", "contraindicaciones", "interacciones", "embarazo",
     "reacciones adversas"...).
+    parte: las secciones largas se devuelven por partes; si total_partes > 1,
+    pide parte=2, 3... para leer el resto.
     """
-    return _seccion(nregistro, seccion, "ficha")
+    return _seccion(nregistro, seccion, "ficha", parte)
 
 
 @mcp.tool()
-def prospecto_seccion(nregistro: str, seccion: str) -> dict:
+def prospecto_seccion(nregistro: str, seccion: str, parte: int = 1) -> dict:
     """Devuelve el texto de una sección del prospecto de un medicamento.
 
     Secciones del prospecto: 1 qué es, 2 antes de tomar (advertencias,
     interacciones, embarazo), 3 cómo tomar, 4 efectos adversos,
     5 conservación, 6 composición. También acepta esos alias.
+    parte: si total_partes > 1, pide parte=2, 3... para leer el resto.
     """
-    return _seccion(nregistro, seccion, "prospecto")
+    return _seccion(nregistro, seccion, "prospecto", parte)
 
 
 def _problemas_de(med: dict) -> list[dict]:

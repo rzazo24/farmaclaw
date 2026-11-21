@@ -17,7 +17,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - Nunca pedir ni guardar datos identificativos de pacientes.
 
 ## Reglas para los servidores MCP
-- Respuestas compactas: nunca documentos enteros, solo lo pedido. Siempre un campo `fuente` con URL pública.
+- Respuestas compactas: nunca documentos enteros, solo lo pedido. Secciones de más de 8.000 caracteres se sirven por partes (`parte=N`). Siempre un campo `fuente` con URL pública.
 - Errores con `ToolError`, claros y en español.
 - Timeout de 15 s y un reintento. Caché en memoria con TTL de 1 h.
 - Logs solo a stderr (stdout es el canal MCP).
