@@ -1,0 +1,13 @@
+[Unit]
+Description=Farmaclaw: Claude Code con Remote Control dentro de tmux
+
+[Service]
+# La espera a la red la hace el script (network-online.target no existe en servicios de usuario).
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/farmaclaw/scripts/arrancar.sh
+# Al parar el servicio solo se para el script (ya terminado), no tmux ni Claude.
+KillMode=process
+
+[Install]
+WantedBy=default.target

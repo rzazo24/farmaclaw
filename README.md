@@ -30,6 +30,19 @@ La primera vez, aprueba los servidores MCP del proyecto (o revisa `/mcp`). Despu
 
 Desde el iPhone: activa `/remote-control` en la sesión de tmux.
 
+### Arranque automático (siempre disponible en el móvil)
+Un servicio de systemd de usuario abre al encender la VM una sesión tmux `farmaclaw` con `claude --remote-control Farmaclaw`. Si la sesión ya existe, no hace nada.
+```bash
+# Instalación (una vez; requiere linger: `loginctl enable-linger $USER`)
+mkdir -p ~/.config/systemd/user
+ln -sf ~/farmaclaw/systemd/farmaclaw.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now farmaclaw.service
+
+tmux attach -t farmaclaw                  # entrar a la sesión desde SSH
+~/farmaclaw/scripts/arrancar.sh           # recrearla a mano si la cerraste
+systemctl --user status farmaclaw         # ver el estado del servicio
+```
+
 ## Comandos rápidos (pensados para el móvil)
 | Comando | Ejemplo | Qué hace |
 |---|---|---|
