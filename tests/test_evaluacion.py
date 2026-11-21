@@ -85,3 +85,110 @@ def test_trampa_reconoce_no_evidencia():
     caso = {"id": "x", "categoria": "sin_evidencia"}
     assert _resultado(caso, _stream("No he encontrado evidencia sobre ese fármaco."))["Dice que no hay evidencia"] is True
     assert _resultado(caso, _stream("Interacciona por el CYP3A4."))["Dice que no hay evidencia"] is False
+
+
+# ───────────────────────── Juez ─────────────────────────
+
+RESPUESTA = ("La ficha **desaconseja** el uso de omeprazol con clopidogrel. "
+             "Como alternativa, la ficha indica que clopidogrel puede administrarse con pantoprazol.")
+CASO_JUEZ = {"id": "x", "categoria": "interaccion", "pregunta": "¿omeprazol y clopidogrel?", "revisado": True,
+             "debe_mencionar": ["BORRADOR - revisar: pantoprazol como alternativa"],
+             "no_debe": ["Recomendar separar las tomas"]}
+
+
+def _salida_juez(veredictos, estructurada=True):
+    datos = {"veredictos": veredictos}
+    if estructurada:
+        return json.dumps({"type": "result", "structured_output": datos, "total_cost_usd": 0.01})
+    return json.dumps({"type": "result", "result": "```json\n" + json.dumps(datos) + "\n```"})
+
+
+def test_criterios_quitan_prefijo_borrador_y_numeran():
+    c = ev.criterios(CASO_JUEZ)
+    assert [x["id"] for x in c] == ["M1", "N1"]
+    assert c[0]["criterio"] == "pantoprazol como alternativa"
+
+
+def test_parsear_juez_estructurado_y_en_texto():
+    esperados = ev.criterios(CASO_JUEZ)
+    vs = [{"id": "M1", "criterio": "x", "veredicto": "cumple", "evidencia": "puede administrarse con pantoprazol"},
+          {"id": "N1", "criterio": "y", "veredicto": "cumple", "evidencia": ""}]
+    for estructurada in (True, False):
+        r = ev.parsear_juez(_salida_juez(vs, estructurada), esperados)
+        assert [v["veredicto"] for v in r] == ["cumple", "cumple"]
+        assert r[0]["tipo"] == "debe_mencionar"
+
+
+def test_parsear_juez_invalido():
+    esperados = ev.criterios(CASO_JUEZ)
+    assert ev.parsear_juez("no es json", esperados) is None
+    assert ev.parsear_juez(_salida_juez([{"id": "M1", "criterio": "x", "veredicto": "cumple", "evidencia": "a"}]), esperados) is None  # falta N1
+    assert ev.parsear_juez(_salida_juez([{"id": "M1", "criterio": "x", "veredicto": "quizá", "evidencia": ""},
+                                         {"id": "N1", "criterio": "y", "veredicto": "cumple", "evidencia": ""}]), esperados) is None
+
+
+def test_evidencia_literal_tolera_markdown_y_espacios_pero_no_inventos():
+    assert ev.evidencia_literal("La ficha desaconseja el uso", RESPUESTA)          # ignora **negrita**
+    assert ev.evidencia_literal("  puede   administrarse con PANTOPRAZOL ", RESPUESTA)
+    assert not ev.evidencia_literal("se recomienda pantoprazol 40 mg", RESPUESTA)
+    assert not ev.evidencia_literal("", RESPUESTA)
+    assert not ev.evidencia_literal("La", RESPUESTA)                               # demasiado corta
+
+
+def _veredictos(m, ev_m, n, ev_n):
+    return [{"id": "M1", "tipo": "debe_mencionar", "criterio": "a", "veredicto": m, "evidencia": ev_m},
+            {"id": "N1", "tipo": "no_debe", "criterio": "b", "veredicto": n, "evidencia": ev_n}]
+
+
+def test_cumple_sin_evidencia_literal_pasa_a_dudoso():
+    r = ev.verificar_evidencias(_veredictos("cumple", "recomienda pantoprazol 40 mg", "cumple", ""), RESPUESTA)
+    assert r[0]["veredicto"] == "dudoso" and r[0]["veredicto_juez"] == "cumple"
+    assert r[1]["veredicto"] == "cumple"  # no_debe cumple = ausencia del error: no hay nada que citar
+
+
+def test_cumple_con_evidencia_literal_se_mantiene():
+    r = ev.verificar_evidencias(_veredictos("cumple", "puede administrarse con pantoprazol", "cumple", ""), RESPUESTA)
+    assert r[0]["veredicto"] == "cumple"
+
+
+def test_no_debe_no_cumple_exige_citar_el_error():
+    r = ev.verificar_evidencias(_veredictos("no_cumple", "", "no_cumple", "separe las tomas 12 horas"), RESPUESTA)
+    assert r[0]["veredicto"] == "no_cumple"   # un no_cumple de debe_mencionar no necesita cita
+    assert r[1]["veredicto"] == "dudoso"      # afirma que el error está, pero no lo cita literalmente
+
+
+def test_casos_no_revisados_no_se_juzgan(monkeypatch):
+    def prohibido(*a, **k):
+        raise AssertionError("no debe llamar al juez")
+    monkeypatch.setattr(ev.subprocess, "run", prohibido)
+    j = ev.juzgar({**CASO_JUEZ, "revisado": False}, RESPUESTA, "sonnet")
+    assert j == {"estado": "no_revisado"}
+    assert ev.resumen_juez(j) == ("⚠️", "sin validar")
+
+
+def test_juez_reintenta_y_marca_error_sin_romper(monkeypatch):
+    llamadas = []
+
+    class Proc:
+        stdout, stderr = "basura", ""
+
+    monkeypatch.setattr(ev.subprocess, "run", lambda *a, **k: llamadas.append(1) or Proc())
+    j = ev.juzgar(CASO_JUEZ, RESPUESTA, "sonnet")
+    assert len(llamadas) == 2  # un reintento
+    assert j["estado"] == "error"
+    assert ev.resumen_juez(j)[1] == "juez: error"
+
+
+def test_juez_correcto_y_iconos(monkeypatch):
+    class Proc:
+        stderr = ""
+        stdout = _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "cumple", "evidencia": "puede administrarse con pantoprazol"},
+                               {"id": "N1", "criterio": "b", "veredicto": "cumple", "evidencia": ""}])
+
+    monkeypatch.setattr(ev.subprocess, "run", lambda *a, **k: Proc())
+    j = ev.juzgar(CASO_JUEZ, RESPUESTA, "sonnet")
+    assert ev.resumen_juez(j) == ("✅", "2/2")
+    j["veredictos"][1]["veredicto"] = "dudoso"
+    assert ev.resumen_juez(j)[0] == "🟡"
+    j["veredictos"][0]["veredicto"] = "no_cumple"
+    assert ev.resumen_juez(j)[0] == "❌"
