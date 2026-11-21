@@ -98,6 +98,9 @@ mcp/pubmed/server.py       MCP de PubMed (+ LactMed)
 mcp/elactancia/server.py   MCP de e-lactancia
 ```
 
+## Licencia
+El código de Farmaclaw se distribuye bajo licencia [MIT](LICENSE). La licencia cubre solo el código: los datos que consultan los servidores siguen las condiciones de cada fuente (abajo).
+
 ## Licencias de las fuentes
 - **e-lactancia.org** (APILAM): CC BY-NC-SA 4.0. Uso no comercial y con atribución. El servidor consulta solo bajo demanda (1 petición/s, caché 24 h), sin descargas masivas.
 - **LactMed** (NIH/NICHD) y **PubMed**: dominio público / uso libre de E-utilities según las normas del NCBI.
