@@ -128,7 +128,7 @@ def _medicamento(nregistro: str) -> dict:
 
 
 def _buscar(texto: str) -> list[dict]:
-    """Busca por código nacional o nº de registro (si son dígitos), nombre comercial o principio activo."""
+    """Busca por código nacional o nº de registro (si son dígitos), o por nombre comercial y principio activo."""
     texto = texto.strip()
     codigo = texto.split(".")[0]  # el CN de la caja puede llevar dígito de control: "712729.8"
     if codigo.isdigit():
@@ -139,11 +139,14 @@ def _buscar(texto: str) -> list[dict]:
             if med:
                 return [med]
         return []
+    # Siempre ambas búsquedas: por nombre solo salen los genéricos que llevan el principio
+    # activo en el nombre ("ácido valproico") y se perderían las marcas (Depakine).
+    vistos: dict[str, dict] = {}
     for campo in ("nombre", "practiv1"):
-        data = _get("/medicamentos", {campo: texto})
-        if data and data.get("resultados"):
-            return data["resultados"]
-    return []
+        data = _get("/medicamentos", {campo: texto}) or {}
+        for m in data.get("resultados", []):
+            vistos.setdefault(m["nregistro"], m)
+    return list(vistos.values())
 
 
 def _resumen(m: dict) -> dict:

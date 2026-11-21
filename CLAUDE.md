@@ -26,7 +26,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 ## Particularidades de las APIs (comprobadas)
 - CIMA: `/psuministro?nregistro=` ignora el parámetro; hay que ir por presentación: `/psuministro/{cn}`.
 - CIMA: una sección inexistente devuelve 200 con `{"error": ...}`.
-- CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol").
+- CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol"). Por nombre no salen las marcas (Depakine): se busca siempre por nombre Y por principio activo (`practiv1`, que entiende "valproato" = "valproico").
 - CIMA: las fechas son medianoche de Madrid en ms; convertir con `Europe/Madrid`, no UTC (saldría el día anterior).
 - PubMed: artículos recientes pueden no tener MeSH todavía.
 
