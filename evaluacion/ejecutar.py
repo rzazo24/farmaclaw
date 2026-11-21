@@ -29,6 +29,7 @@ import yaml
 RAIZ = Path(__file__).resolve().parents[1]
 CASOS = Path(__file__).with_name("casos.yaml")
 JUEZ = Path(__file__).with_name("juez.md")
+ACEPTADOS = Path(__file__).with_name("aceptados.yaml")
 RESULTADOS = Path(__file__).with_name("resultados")
 TIMEOUT_CASO = 600  # s; una consulta normal tarda 1-2 min
 
@@ -60,7 +61,8 @@ def lanzar(caso: dict, carpeta: Path) -> dict:
     crudo = carpeta / f"{caso['id']}.jsonl"
     inicio = time.monotonic()
     try:
-        proc = subprocess.run(COMANDO + [prompt], cwd=RAIZ, capture_output=True, text=True, timeout=TIMEOUT_CASO)
+        proc = subprocess.run(COMANDO + [prompt], cwd=RAIZ, capture_output=True, text=True, timeout=TIMEOUT_CASO,
+                              stdin=subprocess.DEVNULL)
         salida, error = proc.stdout, proc.stderr.strip()
     except subprocess.TimeoutExpired as e:
         salida, error = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""), f"timeout ({TIMEOUT_CASO} s)"
@@ -198,8 +200,11 @@ def criterios(caso: dict) -> list[dict]:
     """Criterios a juzgar, con id M1.. (debe_mencionar) y N1.. (no_debe), sin el prefijo de borrador."""
     lista = []
     for prefijo, campo in (("M", "debe_mencionar"), ("N", "no_debe")):
-        for n, texto in enumerate(caso.get(campo, []), 1):
-            lista.append({"id": f"{prefijo}{n}", "tipo": campo, "criterio": PREFIJO_BORRADOR.sub("", texto).strip()})
+        for n, item in enumerate(caso.get(campo, []), 1):
+            # Texto suelto o criterio anclado a la fuente: {criterio, cita, fuente}
+            texto = item["criterio"] if isinstance(item, dict) else item
+            lista.append({"id": f"{prefijo}{n}", "tipo": campo, "criterio": PREFIJO_BORRADOR.sub("", texto).strip(),
+                          **({"cita": item["cita"], "fuente": item["fuente"]} if isinstance(item, dict) else {})})
     return lista
 
 
@@ -250,17 +255,10 @@ def verificar_evidencias(veredictos: list[dict], respuesta: str) -> list[dict]:
     return veredictos
 
 
-def juzgar(caso: dict, respuesta: str, modelo: str) -> dict:
-    if not caso.get("revisado"):
-        return {"estado": "no_revisado"}
-    esperados = criterios(caso)
-    if not esperados:
-        return {"estado": "sin_criterios"}
-    if not respuesta:
-        return {"estado": "error", "detalle": "el agente no dio respuesta"}
-
+def _llamar_juez(pregunta: str, respuesta: str, esperados: list[dict], modelo: str) -> tuple[list[dict] | None, float, str]:
+    """Una consulta al juez (con un reintento). Devuelve (veredictos o None, coste, detalle del error)."""
     entrada = json.dumps({
-        "pregunta": caso["pregunta"],
+        "pregunta": pregunta,
         "respuesta": respuesta,
         "criterios": [{"id": c["id"], "criterio": c["criterio"]} for c in esperados],
     }, ensure_ascii=False, indent=1)
@@ -276,20 +274,50 @@ def juzgar(caso: dict, respuesta: str, modelo: str) -> dict:
     with tempfile.TemporaryDirectory() as aislado:
         for _ in range(2):  # un reintento si la salida no es válida
             try:
-                proc = subprocess.run(comando, cwd=aislado, capture_output=True, text=True, timeout=TIMEOUT_JUEZ)
+                proc = subprocess.run(comando, cwd=aislado, capture_output=True, text=True, timeout=TIMEOUT_JUEZ,
+                                      stdin=subprocess.DEVNULL)
             except subprocess.TimeoutExpired:
                 detalle = f"timeout ({TIMEOUT_JUEZ} s)"
                 continue
             try:
                 coste += json.loads(proc.stdout).get("total_cost_usd") or 0
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, AttributeError):
                 pass
             veredictos = parsear_juez(proc.stdout, esperados)
             if veredictos is not None:
-                return {"estado": "juzgado", "modelo": modelo, "coste_usd": round(coste, 4),
-                        "veredictos": verificar_evidencias(veredictos, respuesta)}
+                return verificar_evidencias(veredictos, respuesta), coste, ""
             detalle = "respuesta del juez no válida: " + (proc.stderr.strip() or proc.stdout.strip())[:200]
-    return {"estado": "error", "detalle": detalle, "coste_usd": round(coste, 4)}
+    return None, coste, detalle
+
+
+def juzgar(caso: dict, respuesta: str, modelo: str, segunda: str | None = None) -> dict:
+    """Juzga los criterios del caso. Los 🟡 se vuelven a juzgar con el modelo `segunda` (si se indica)."""
+    if not caso.get("revisado"):
+        return {"estado": "no_revisado"}
+    esperados = criterios(caso)
+    if not esperados:
+        return {"estado": "sin_criterios"}
+    if not respuesta:
+        return {"estado": "error", "detalle": "el agente no dio respuesta"}
+
+    veredictos, coste, detalle = _llamar_juez(caso["pregunta"], respuesta, esperados, modelo)
+    if veredictos is None:
+        return {"estado": "error", "detalle": detalle, "coste_usd": round(coste, 4)}
+
+    dudosos = [v for v in veredictos if v["veredicto"] == "dudoso"]
+    if segunda and dudosos:
+        revisados, coste2, _ = _llamar_juez(caso["pregunta"], respuesta,
+                                            [{k: v[k] for k in ("id", "tipo", "criterio")} for v in dudosos], segunda)
+        coste += coste2
+        for nuevo in revisados or []:
+            v = next(x for x in veredictos if x["id"] == nuevo["id"])
+            v["segunda_opinion"] = {"modelo": segunda, "veredicto": nuevo["veredicto"]}
+            if nuevo["veredicto"] != "dudoso":  # solo sustituye si la segunda opinión es concluyente
+                v.update(veredicto=nuevo["veredicto"], evidencia=nuevo["evidencia"])
+                v.pop("nota", None)
+                v.pop("veredicto_juez", None)
+    return {"estado": "juzgado", "modelo": modelo, "segunda": segunda if dudosos else None,
+            "coste_usd": round(coste, 4), "veredictos": veredictos}
 
 
 def resumen_juez(j: dict | None) -> tuple[str, str]:
@@ -307,34 +335,73 @@ def resumen_juez(j: dict | None) -> tuple[str, str]:
     return icono, f"{vs.count('cumple')}/{len(vs)}"
 
 
-# ───────────────────────── Informe ─────────────────────────
+# ───────────────────────── Comparación y aceptados ─────────────────────────
 
 ICONO_VEREDICTO = {"cumple": "✅", "no_cumple": "❌", "dudoso": "🟡"}
+
+def cargar_aceptados() -> set[tuple[str, str]]:
+    """(caso, criterio) dados por buenos por el farmacéutico: no vuelven a salir en «Para revisar»."""
+    if not ACEPTADOS.exists():
+        return set()
+    return {(a["caso"], a["criterio"]) for a in yaml.safe_load(ACEPTADOS.read_text()) or []}
+
+
+def problemas(r: dict, aceptados: set[tuple[str, str]]) -> dict[str, str]:
+    """Problemas de un resultado, como {clave estable: texto para el informe}. Excluye los aceptados."""
+    out = {}
+    for c in r.get("comprobaciones", []):
+        if not c["ok"]:
+            out[f"auto:{c['comprobacion']}"] = f"❌ automática: {c['comprobacion']}"
+    j = r.get("juez") or {}
+    if j.get("estado") == "error":
+        out["juez:error"] = f"💥 juez: error ({j.get('detalle', '')})"
+    for v in j.get("veredictos", []):
+        if v["veredicto"] != "cumple" and (r["id"], v["criterio"]) not in aceptados:
+            out[f"juez:{v['criterio']}"] = f"{ICONO_VEREDICTO[v['veredicto']]} {v['id']}: {v['criterio']}"
+    return out
+
+
+def linea_base(carpeta: Path, id_: str, explicita: Path | None = None) -> tuple[dict | None, str | None]:
+    """Resultado del mismo caso en la ejecución anterior (o en la carpeta indicada)."""
+    candidatas = [explicita] if explicita else sorted(
+        (d for d in RESULTADOS.iterdir() if d.is_dir() and d.name < carpeta.name), reverse=True)
+    for d in candidatas:
+        f = d / f"{id_}.json"
+        if f.exists():
+            return json.loads(f.read_text()), d.name
+    return None, None
+
+
+# ───────────────────────── Informe ─────────────────────────
 
 
 def _corto(nombre: str) -> str:
     return nombre.split("__")[-1] if nombre.startswith("mcp__") else nombre
 
 
-def informe(carpeta: Path, resultados: list[dict], commit: str) -> Path:
+def informe(carpeta: Path, resultados: list[dict], commit: str, comparar: Path | None = None) -> Path:
     total = sum(len(r["comprobaciones"]) for r in resultados)
     ok = sum(c["ok"] for r in resultados for c in r["comprobaciones"])
     duracion = sum(r.get("duracion_s") or 0 for r in resultados)
     coste = sum((r.get("coste_usd") or 0) + ((r.get("juez") or {}).get("coste_usd") or 0) for r in resultados)
 
-    para_revisar = []
+    # Solo es nuevo lo que no fallaba en la ejecución anterior del mismo caso; lo aceptado no sale.
+    aceptados = cargar_aceptados()
+    nuevos, vistos, n_aceptados, bases = [], [], 0, set()
     for r in resultados:
-        icono, _ = resumen_juez(r.get("juez"))
-        fallos_auto = [c["comprobacion"] for c in r["comprobaciones"] if not c["ok"]]
-        motivos = []
-        if icono in ("❌", "🟡", "💥"):
-            j = r["juez"]
-            motivos += ([f"{ICONO_VEREDICTO[v['veredicto']]} {v['id']}: {v['criterio']}"
-                         for v in j.get("veredictos", []) if v["veredicto"] != "cumple"]
-                        or [f"💥 {j.get('detalle', 'juez: error')}"])
-        motivos += [f"❌ automática: {f}" for f in fallos_auto]
-        if motivos:
-            para_revisar.append((r["id"], motivos))
+        actuales = problemas(r, aceptados)
+        n_aceptados += sum(1 for v in (r.get("juez") or {}).get("veredictos", [])
+                           if v["veredicto"] != "cumple" and (r["id"], v["criterio"]) in aceptados)
+        base, nombre = linea_base(carpeta, r["id"], comparar)
+        previos = problemas(base, aceptados) if base else {}
+        if nombre:
+            bases.add(nombre)
+        n = [t for k, t in actuales.items() if k not in previos]
+        v = [t for k, t in actuales.items() if k in previos]
+        if n:
+            nuevos.append((r["id"], n))
+        if v:
+            vistos.append((r["id"], v))
 
     l = [
         f"# Evaluación del agente research: {carpeta.name}",
@@ -342,16 +409,25 @@ def informe(carpeta: Path, resultados: list[dict], commit: str) -> Path:
         f"- Commit: `{commit}`",
         f"- Casos: {len(resultados)} · Comprobaciones automáticas: {ok}/{total} ✅",
         f"- Duración total: {duracion / 60:.1f} min · Coste (agente + juez): {coste:.2f} USD",
+        f"- Comparado con: {', '.join(sorted(bases)) or 'nada (primera ejecución de estos casos)'}",
         "",
         "## Para revisar",
         "",
     ]
-    if para_revisar:
-        for id_, motivos in para_revisar:
+    if nuevos:
+        for id_, motivos in nuevos:
             l.append(f"- [{id_}](#{id_})")
             l += [f"  - {m}" for m in motivos]
     else:
-        l.append("Nada: todos los casos juzgados cumplen y no hay fallos automáticos.")
+        l.append("Nada nuevo ✅")
+    if vistos:
+        l += ["", "<details><summary>Ya fallaban en la ejecución anterior "
+              f"({sum(len(m) for _, m in vistos)})</summary>", ""]
+        for id_, motivos in vistos:
+            l.append(f"- [{id_}](#{id_}): " + " · ".join(motivos))
+        l += ["", "</details>"]
+    if n_aceptados:
+        l += ["", f"Aceptados por el farmacéutico (no se muestran): {n_aceptados}. Ver `evaluacion/aceptados.yaml`."]
     no_juzgados = [r["id"] for r in resultados if resumen_juez(r.get("juez"))[0] == "⚠️"]
     if no_juzgados:
         l += ["", f"⚠️ Sin juzgar por criterios sin validar ({len(no_juzgados)}): " + ", ".join(no_juzgados)]
@@ -393,19 +469,30 @@ def informe(carpeta: Path, resultados: list[dict], commit: str) -> Path:
                 if vs:
                     l += ["", f"**{titulo}:**", ""]
                 for v in vs:
-                    l.append(f"- {ICONO_VEREDICTO[v['veredicto']]} **{v['id']}** {v['criterio']}")
+                    aceptado = " (aceptado)" if v["veredicto"] != "cumple" and (r["id"], v["criterio"]) in cargar_aceptados() else ""
+                    l.append(f"- {ICONO_VEREDICTO[v['veredicto']]} **{v['id']}** {v['criterio']}{aceptado}")
                     if v.get("evidencia"):
                         l.append(f"  - Evidencia: «{v['evidencia']}»")
                     if v.get("nota"):
                         l.append(f"  - ⚠️ El juez dijo «{v['veredicto_juez']}», pero {v['nota']}.")
+                    if v.get("segunda_opinion"):
+                        so = v["segunda_opinion"]
+                        l.append(f"  - Segunda opinión ({so['modelo']}): {ICONO_VEREDICTO[so['veredicto']]} {so['veredicto']}")
+                    fuente = next((c for c in criterios(caso) if c["id"] == v["id"] and c.get("cita")), None)
+                    if fuente:
+                        l.append(f"  - Fuente del criterio: «{fuente['cita']}» ([enlace]({fuente['fuente']}))")
         else:
             aviso = {"no_revisado": "⚠️ criterios sin validar, no juzgado",
                      "error": f"💥 juez: error ({(j or {}).get('detalle', '')})",
                      "sin_criterios": "Sin criterios que juzgar"}.get((j or {}).get("estado"), "Juez no ejecutado (--sin-juez)")
             l += [aviso, "", "**Debe mencionar:**", ""]
-            l += [f"- {m}" for m in caso.get("debe_mencionar", [])]
+            for c in criterios(caso):
+                if c["tipo"] == "debe_mencionar":
+                    l.append(f"- {c['criterio']}")
+                    if c.get("cita"):
+                        l.append(f"  - Fuente: «{c['cita']}» ([enlace]({c['fuente']}))")
             l += ["", "**No debe:**", ""]
-            l += [f"- {m}" for m in caso.get("no_debe", [])]
+            l += [f"- {c['criterio']}" for c in criterios(caso) if c["tipo"] == "no_debe"]
         l += ["", "☐ Revisado por farmacéutico", "", "**Notas:** ", "", "### Respuesta", ""]
         l += ["> " + linea if linea else ">" for linea in (r["respuesta"] or "(sin respuesta)").splitlines()]
     ruta = carpeta / "informe.md"
@@ -431,7 +518,33 @@ def _linea_juez(j: dict | None) -> str:
     return "" if j is None else f" · juez {icono} {texto}"
 
 
-def solo_juez(carpeta: Path, casos: list[dict], modelo: str):
+def aceptar(clave: str, motivo: str):
+    """Da por bueno un criterio 🟡/❌ de un caso (CASO:ID, p. ej. int-omeprazol-clopidogrel:N3)."""
+    if ":" not in clave:
+        sys.exit("Formato: --aceptar CASO:ID (p. ej. int-omeprazol-clopidogrel:N3)")
+    id_caso, id_criterio = clave.split(":", 1)
+    for d in sorted((d for d in RESULTADOS.iterdir() if d.is_dir()), reverse=True):
+        f = d / f"{id_caso}.json"
+        if f.exists():
+            v = next((v for v in (json.loads(f.read_text()).get("juez") or {}).get("veredictos", [])
+                      if v["id"] == id_criterio), None)
+            if v:
+                break
+    else:
+        sys.exit(f"No encuentro {clave} en ninguna ejecución juzgada.")
+    lista = yaml.safe_load(ACEPTADOS.read_text()) if ACEPTADOS.exists() else []
+    lista = lista or []
+    if any(a["caso"] == id_caso and a["criterio"] == v["criterio"] for a in lista):
+        sys.exit("Ya estaba aceptado.")
+    lista.append({"caso": id_caso, "criterio": v["criterio"], "veredicto": v["veredicto"],
+                  "motivo": motivo, "fecha": datetime.now().strftime("%Y-%m-%d")})
+    ACEPTADOS.write_text("# Criterios dados por buenos por el farmacéutico: no vuelven a salir en «Para revisar».\n"
+                         "# Si cambia el texto del criterio, la aceptación deja de aplicarse.\n"
+                         + yaml.safe_dump(lista, allow_unicode=True, sort_keys=False))
+    print(f"Aceptado {clave}: {v['criterio']}")
+
+
+def solo_juez(carpeta: Path, casos: list[dict], modelo: str, segunda: str | None, comparar: Path | None):
     """Vuelve a juzgar una ejecución guardada con los criterios actuales, sin repetir las consultas."""
     por_id = {c["id"]: c for c in casos}
     guardados = sorted(p for p in carpeta.glob("*.json"))
@@ -446,11 +559,11 @@ def solo_juez(carpeta: Path, casos: list[dict], modelo: str):
         r["caso"] = por_id[r["id"]]
         r["comprobaciones"] = comprobar(r["caso"], r)  # también con los criterios actuales
         print(f"[{i}/{len(guardados)}] {r['id']} …", end=" ", flush=True)
-        r["juez"] = juzgar(r["caso"], r["respuesta"], modelo)
+        r["juez"] = juzgar(r["caso"], r["respuesta"], modelo, segunda)
         print(_linea_juez(r["juez"]).lstrip(" ·") or "sin juez")
         _guardar(carpeta, r)
         resultados.append(r)
-    print(f"\nInforme: {informe(carpeta, resultados, _commit() + ' (rejuzgado)')}")
+    print(f"\nInforme: {informe(carpeta, resultados, _commit() + ' (rejuzgado)', comparar)}")
 
 
 def main():
@@ -461,16 +574,26 @@ def main():
     g.add_argument("--todos", action="store_true", help="todos los casos")
     g.add_argument("--solo-juez", metavar="CARPETA", type=Path,
                    help="vuelve a juzgar una ejecución guardada, sin repetir las consultas al agente")
+    g.add_argument("--aceptar", metavar="CASO:ID",
+                   help="da por bueno un criterio dudoso/incumplido para que no vuelva a salir")
     p.add_argument("--sin-juez", action="store_true", help="solo las comprobaciones automáticas")
     p.add_argument("--modelo-juez", default="sonnet", help="modelo del juez (por defecto: sonnet)")
+    p.add_argument("--segunda-opinion", default="opus", metavar="MODELO",
+                   help="modelo que vuelve a juzgar los dudosos (por defecto: opus; 'no' para desactivar)")
+    p.add_argument("--comparar", type=Path, metavar="CARPETA",
+                   help="ejecución con la que comparar (por defecto: la anterior de cada caso)")
+    p.add_argument("--motivo", default="", help="con --aceptar: por qué se da por bueno")
     p.add_argument("--casos", type=Path, default=CASOS, help="archivo de casos (por defecto: evaluacion/casos.yaml)")
     args = p.parse_args()
     if args.solo_juez and args.sin_juez:
         sys.exit("--solo-juez y --sin-juez no tienen sentido juntos.")
 
+    if args.aceptar:
+        return aceptar(args.aceptar, args.motivo)
+    segunda = None if args.segunda_opinion.lower() == "no" else args.segunda_opinion
     casos = yaml.safe_load(args.casos.read_text())["casos"]
     if args.solo_juez:
-        return solo_juez(args.solo_juez, casos, args.modelo_juez)
+        return solo_juez(args.solo_juez, casos, args.modelo_juez, segunda, args.comparar)
     if args.caso:
         desconocidos = set(args.caso) - {c["id"] for c in casos}
         if desconocidos:
@@ -492,13 +615,13 @@ def main():
         r = lanzar(caso, carpeta)
         r.update(id=caso["id"], categoria=caso["categoria"], caso=caso)
         r["comprobaciones"] = comprobar(caso, r)
-        r["juez"] = None if args.sin_juez else juzgar(caso, r["respuesta"], args.modelo_juez)
+        r["juez"] = None if args.sin_juez else juzgar(caso, r["respuesta"], args.modelo_juez, segunda)
         _guardar(carpeta, r)
         ok = sum(c["ok"] for c in r["comprobaciones"])
         print(f"{ok}/{len(r['comprobaciones'])} ✅ en {r['duracion_s']:.0f} s{_linea_juez(r['juez'])}")
         resultados.append(r)
 
-    print(f"\nInforme: {informe(carpeta, resultados, commit)}")
+    print(f"\nInforme: {informe(carpeta, resultados, commit, args.comparar)}")
 
 
 if __name__ == "__main__":

@@ -25,14 +25,31 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.5", minimo: 2}
     debe_mencionar:
-      - "BORRADOR - revisar: omeprazol inhibe el CYP2C19 y reduce la activación de clopidogrel"
-      - "BORRADOR - revisar: la ficha desaconseja el uso concomitante de omeprazol/esomeprazol"
-      - "BORRADOR - revisar: separar las tomas no evita la interacción"
-      - "BORRADOR - revisar: pantoprazol como alternativa según la ficha de clopidogrel"
+      - criterio: La ficha de clopidogrel desaconseja el uso concomitante de omeprazol o esomeprazol
+        cita: Como precaución debe desaconsejarse el uso concomitante de omeprazol o esomeprazol (ver sección 4.4).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/71622/FT_71622.html
+      - criterio: 'Mecanismo: clopidogrel se activa parcialmente por CYP2C19 y los inhibidores (omeprazol incluido) reducen su metabolito activo'
+        cita: Debido a que clopidogrel es parcialmente metabolizado a su metabolito activo por el CYP2C19, sería esperable que el uso de medicamentos que inhiben la actividad de esta enzima den lugar a una reducción de los niveles del metabolito activo de clopidogrel.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/71622/FT_71622.html
+      - criterio: Separar las tomas 12 horas no evita la reducción del metabolito activo de clopidogrel
+        cita: La administración de omeprazol 80 mg una vez al día, bien al mismo tiempo que clopidogrel, o bien con un intervalo de 12 horas entre las administraciones de los dos medicamentos, disminuyó la exposición del metabolito activo un 45% (dosis de carga) y un 40% (dosis de mantenimiento).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/71622/FT_71622.html
+      - criterio: 'Alternativa: pantoprazol puede usarse con clopidogrel (menor reducción del metabolito activo)'
+        cita: Estos resultados indican que clopidogrel puede administrarse con pantoprazol.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/71622/FT_71622.html
+      - criterio: Los antiácidos y anti-H2 no interfieren con la actividad antiagregante de clopidogrel
+        cita: No existe evidencia de que otros medicamentos que disminuyen los ácidos del estómago como los bloqueantes H2 o los antiácidos, interfieran con la actividad antiagregante de clopidogrel.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/71622/FT_71622.html
     no_debe:
       - "Confundir omeprazol con esomeprazol al elegir la ficha"
       - "Recomendar separar las tomas como solución"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: omeprazol inhibe el CYP2C19 y reduce la activación de clopidogrel"
+      - "BORRADOR - revisar: la ficha desaconseja el uso concomitante de omeprazol/esomeprazol"
+      - "BORRADOR - revisar: separar las tomas no evita la interacción"
+      - "BORRADOR - revisar: pantoprazol como alternativa según la ficha de clopidogrel"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: int-simvastatina-claritromicina
@@ -41,12 +58,23 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.5", minimo: 2}
     debe_mencionar:
-      - "BORRADOR - revisar: claritromicina es inhibidor potente del CYP3A4"
-      - "BORRADOR - revisar: aumenta los niveles de simvastatina y el riesgo de miopatía/rabdomiólisis"
-      - "BORRADOR - revisar: la combinación está contraindicada; suspender simvastatina durante el tratamiento"
+      - criterio: La combinación de claritromicina con simvastatina está contraindicada por el mayor riesgo de miopatía, incluida rabdomiólisis
+        cita: La claritromicina no debe ser administrada de manera concomitante con inhibidores de la HMG-CoA reductasa (estatinas) que son metabolizadas de forma extensa por la isoforma CYP3A4 (lovastatina o simvastatina), debido al aumento del riesgo de miopatía, incluyendo rabdomiólisis (ver sección 4.4).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/67639/FT_67639.html
+      - criterio: Los inhibidores potentes de CYP3A4, entre ellos la claritromicina, aumentan el riesgo de miopatía y rabdomiólisis al elevar la actividad inhibidora de la HMG-CoA reductasa en plasma
+        cita: Los inhibidores potentes del citocromo P450 3A4 aumentan el riesgo de miopatía y rabdomiólisis aumentando la concentración de la actividad inhibidora de la HMG-CoA reductasa en plasma durante el tratamiento con simvastatina.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64185/FT_64185.html
+      - criterio: Si el inhibidor potente de CYP3A4 es inevitable, simvastatina debe suspenderse durante el tratamiento y se debe considerar una estatina alternativa
+        cita: Si el tratamiento con inhibidores potentes de la CYP3A4 (medicamentso que aumentan el AUC aproximadamente 5 veces o más) es inevitable, el tratamiento con simvastatina debe suspenderse durante el curso del tratamiento (y se debe considerar el uso de una estatina alternativa).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64185/FT_64185.html
     no_debe:
       - "Presentarlo como una interacción menor"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: claritromicina es inhibidor potente del CYP3A4"
+      - "BORRADOR - revisar: aumenta los niveles de simvastatina y el riesgo de miopatía/rabdomiólisis"
+      - "BORRADOR - revisar: la combinación está contraindicada; suspender simvastatina durante el tratamiento"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: int-acenocumarol-ibuprofeno
@@ -56,12 +84,26 @@ casos:
       - {herramienta: buscar_medicamento}
       - {herramienta: ficha_tecnica_seccion, seccion: "4.5", minimo: 2}
     debe_mencionar:
-      - "BORRADOR - revisar: Sintrom es acenocumarol"
-      - "BORRADOR - revisar: los AINE aumentan el riesgo de hemorragia con anticoagulantes orales"
-      - "BORRADOR - revisar: paracetamol como alternativa analgésica, con control del INR si uso prolongado"
+      - criterio: Los AINE (ibuprofeno incluido) potencian el efecto anticoagulante y aumentan el riesgo de hemorragia con Sintrom, por lo que generalmente no se recomienda asociarlos
+        cita: otros antiinflamatorios no esteroideos incluidos los inhibidores de la ciclo-oxigenasa 2 (p.ej. celecoxib)
+        fuente: https://cima.aemps.es/cima/dochtml/ft/25670/FT_25670.html
+      - criterio: La ficha técnica desaconseja estos medicamentos salvo indicación estricta y, si se combinan, exige controles de coagulación más frecuentes
+        cita: Se desaconseja generalmente el uso de Sintrom junto con estos medicamentos, salvo cuando esté estrictamente indicado
+        fuente: https://cima.aemps.es/cima/dochtml/ft/25670/FT_25670.html
+      - criterio: 'El paracetamol también figura entre los fármacos que pueden potenciar el efecto anticoagulante del acenocumarol, así que no es una alternativa libre de interacción: conviene vigilar la coagulación'
+        cita: 'Los siguientes medicamentos pueden potenciar el efecto anticoagulante de acenocumarol: alopurinol, esteroides anabolizantes, andrógenos, agentes antiarrítmicos (p.ej. amiodarona, quinidina)'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/25670/FT_25670.html
+      - criterio: Al añadir o retirar un medicamento junto a Sintrom hay que vigilar y controlar a menudo la coagulación (p. ej. dos veces por semana)
+        cita: es preciso vigilar estrechamente la coagulación y controlarla a menudo (p.ej. dos veces por semana) cuando se prescriba un medicamento en combinación con Sintrom o se interrumpa la administración concomitante.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/25670/FT_25670.html
     no_debe:
       - "Recomendar ibuprofeno sin advertencias"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: Sintrom es acenocumarol"
+      - "BORRADOR - revisar: los AINE aumentan el riesgo de hemorragia con anticoagulantes orales"
+      - "BORRADOR - revisar: paracetamol como alternativa analgésica, con control del INR si uso prolongado"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: int-levotiroxina-hierro
@@ -70,11 +112,19 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.5", minimo: 1}
     debe_mencionar:
-      - "BORRADOR - revisar: las sales de hierro reducen la absorción de levotiroxina"
-      - "BORRADOR - revisar: separar las tomas al menos 2 horas"
+      - criterio: Eutirox debe tomarse como mínimo 2 horas antes que los medicamentos con hierro (y con aluminio o sales de calcio), por lo que no conviene tomarlos a la vez
+        cita: "Por ello, los fármacos que contienen levotiroxina deben administrarse como mínimo 2 horas antes que el fármaco con aluminio.\n\nLo mismo aplica para medicamentos que contienen hierro y sales de calcio."
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64014/FT_64014.html
+      - criterio: Eutirox se toma en dosis única por la mañana, en ayunas, media hora antes del desayuno, con un poco de líquido
+        cita: 'Administración: como una dosis única por la mañana, con el estómago vacío, media hora antes del desayuno, preferiblemente con un poco de líquido (por ejemplo, medio vaso de agua).'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64014/FT_64014.html
     no_debe:
       - "Decir que no hay interacción"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: las sales de hierro reducen la absorción de levotiroxina"
+      - "BORRADOR - revisar: separar las tomas al menos 2 horas"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: int-triple-enalapril-espironolactona-ibuprofeno
@@ -83,12 +133,29 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.5", minimo: 3}
     debe_mencionar:
-      - "BORRADOR - revisar: enalapril + espironolactona: riesgo de hiperpotasemia"
-      - "BORRADOR - revisar: AINE + IECA (+ diurético): riesgo de insuficiencia renal aguda y menor efecto antihipertensivo"
-      - "BORRADOR - revisar: vigilar potasio y función renal"
+      - criterio: Enalapril con diuréticos ahorradores de potasio como espironolactona puede aumentar significativamente el potasio en sangre; si se usan juntos, con precaución y controles frecuentes de potasio
+        cita: Los diuréticos ahorradores de potasio (por ejemplo, espironolactona, triamtereno o amilorida), suplementos de potasio o sustitutos de la sal que contienen potasio pueden dar lugar a aumentos significativos del potasio en sangre.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64767/FT_64767.html
+      - criterio: 'AINE + IECA: menor efecto antihipertensivo, más potasio sérico y deterioro de la función renal, con riesgo raro de insuficiencia renal aguda sobre todo si hay depleción de volumen o diuréticos'
+        cita: Raramente puede producirse insuficiencia renal aguda, especialmente en pacientes con función renal comprometida (como ancianos o pacientes que tienen depleción de volumen, incluyendo aquellos en tratamiento con diuréticos).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/64767/FT_64767.html
+      - criterio: Ibuprofeno con diurético aumenta el riesgo de insuficiencia renal y puede contrarrestar el efecto diurético; con ahorradores de potasio exige vigilar el potasio
+        cita: El empleo simultáneo de un AINE y un diurético puede aumentar el riesgo de insuficiencia renal como consecuencia de una reducción del flujo sanguíneo renal.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82814/FT_82814.html
+      - criterio: 'Con ibuprofeno e IECA: hidratar al paciente, monitorizar la función renal al iniciar la combinación y vigilar cuidadosamente el potasio'
+        cita: Se debe indicar a los pacientes que beban suficiente líquido y monitoricen de forma periódica los valores renales inmediatamente tras el inicio de la terapia combinada.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82814/FT_82814.html
+      - criterio: La ficha de espironolactona asocia la hiperpotasemia a IECA con ahorradores de potasio y a AINE con ahorradores de potasio
+        cita: 'Analgésicos antiinflamatorios no esteroideos: la administración conjunta de AINES con diuréticos ahorradores de potasio se ha asociado a la aparición de hiperpotasemia.'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/39059/FT_39059.html
     no_debe:
       - "Analizar solo una pareja de las tres posibles"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: enalapril + espironolactona: riesgo de hiperpotasemia"
+      - "BORRADOR - revisar: AINE + IECA (+ diurético): riesgo de insuficiencia renal aguda y menor efecto antihipertensivo"
+      - "BORRADOR - revisar: vigilar potasio y función renal"
+    anclado: '2026-11-21'
     revisado: false
 
   # ───────────────────────── Lactancia (4) ─────────────────────────
@@ -101,12 +168,26 @@ casos:
       - {herramienta: lactmed}
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
     debe_mencionar:
-      - "BORRADOR - revisar: e-lactancia lo clasifica como compatible (riesgo muy bajo)"
-      - "BORRADOR - revisar: paso a leche mínimo"
-      - "BORRADOR - revisar: la ficha técnica es más conservadora que e-lactancia/LactMed"
+      - criterio: e-lactancia clasifica el ibuprofeno como riesgo muy bajo, compatible con la lactancia (seguro, mejor opción)
+        cita: Riesgo muy bajo. Compatible (seguro, mejor opción)
+        fuente: https://www.e-lactancia.org/breastfeeding/ibuprofen/product/
+      - criterio: El paso a leche es ínfimo o nulo y no se han observado problemas en lactantes de madres que lo tomaban
+        cita: explican el ínfimo o nulo paso a leche observado.
+        fuente: https://www.e-lactancia.org/breastfeeding/ibuprofen/product/
+      - criterio: LactMed lo considera analgésico/antiinflamatorio de elección en madres lactantes por sus niveles extremadamente bajos en leche
+        cita: ibuprofen is a preferred choice as an analgesic or anti-inflammatory agent in nursing mothers.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM142/
+      - criterio: 'La ficha técnica es más conservadora: no recomienda su uso en lactancia por riesgo teórico, aunque reconoce concentraciones inapreciables en leche'
+        cita: no se recomienda el uso de ibuprofeno durante la lactancia debido al riesgo potencial de inhibir la síntesis de prostaglandinas en el neonato.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
     no_debe:
       - "Recomendar suspender la lactancia"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: e-lactancia lo clasifica como compatible (riesgo muy bajo)"
+      - "BORRADOR - revisar: paso a leche mínimo"
+      - "BORRADOR - revisar: la ficha técnica es más conservadora que e-lactancia/LactMed"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: lac-sertralina
@@ -116,12 +197,29 @@ casos:
       - {herramienta: elactancia}
       - {herramienta: lactmed}
     debe_mencionar:
-      - "BORRADOR - revisar: niveles bajos en leche; normalmente indetectable en el lactante"
-      - "BORRADOR - revisar: considerado de elección entre los antidepresivos en lactancia"
-      - "BORRADOR - revisar: vigilar al lactante, más en prematuros"
+      - criterio: Sertralina se considera compatible con la lactancia (riesgo muy bajo, nivel 0); es probablemente el antidepresivo más seguro durante la lactancia.
+        cita: Es, probablemente, el antidepresivo más seguro durante la lactancia.
+        fuente: https://www.e-lactancia.org/breastfeeding/sertraline-hydrochloride/product/
+      - criterio: Por los niveles bajos en leche, el lactante ingiere poca cantidad y normalmente no se detecta en su suero.
+        cita: Because of the low levels of sertraline in breastmilk, amounts ingested by the infant are small and is usually not detected in the serum of the infant, although the weakly active metabolite norsertraline (desmethylsertraline) is often detectable in low levels in infant serum.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM328/
+      - criterio: La mayoría de revisores autorizados la consideran un antidepresivo preferido durante la lactancia, sin efectos adversos en el desarrollo hasta 5 años.
+        cita: No adverse effects on development have been found in infants followed for up to 5 years of age. Most authoritative reviewers consider sertraline a preferred antidepressants during breastfeeding.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM328/
+      - criterio: Raramente, los prematuros con metabolismo reducido pueden acumularla y presentar síntomas similares a la abstinencia neonatal.
+        cita: Rarely, preterm infants with impaired metabolic activity might accumulate the drug and demonstrate symptoms similar to neonatal abstinence.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM328/
+      - criterio: Puede causar galactorrea y una disminución transitoria de la producción de leche que mejora con buena hidratación.
+        cita: Puede darse también disminución transitoria de la producción de leche que mejora con una buena hidratación.
+        fuente: https://www.e-lactancia.org/breastfeeding/sertraline-hydrochloride/product/
     no_debe:
       - "Recomendar suspender la lactancia"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: niveles bajos en leche; normalmente indetectable en el lactante"
+      - "BORRADOR - revisar: considerado de elección entre los antidepresivos en lactancia"
+      - "BORRADOR - revisar: vigilar al lactante, más en prematuros"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: lac-codeina
@@ -132,12 +230,29 @@ casos:
       - {herramienta: lactmed}
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
     debe_mencionar:
-      - "BORRADOR - revisar: riesgo en metabolizadoras ultrarrápidas del CYP2D6 (depresión respiratoria en el lactante)"
-      - "BORRADOR - revisar: la ficha técnica la contraindica o desaconseja en lactancia"
-      - "BORRADOR - revisar: alternativas más seguras si las proponen las fuentes"
+      - criterio: La ficha técnica de Codeisan (codeína, antitusivo) contraindica la codeína en mujeres durante la lactancia.
+        cita: La codeína está contraindicada en mujeres durante la lactancia (ver sección 4.3).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/5255/FT_5255.html
+      - criterio: En metabolizadoras ultrarrápidas de CYP2D6 pasa más morfina a la leche y, muy raramente, puede causar toxicidad opioide mortal en el lactante.
+        cita: Sin embargo, si el paciente es un metabolizador ultra rápido de CYP2D6, pueden encontrarse en la leche materna niveles más altos del metabolito activo, morfina, y en muy raras ocasiones esto puede resultar en síntomas de toxicidad opioide en el bebé, pueden ser mortales.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/5255/FT_5255.html
+      - criterio: 'Las fuentes discrepan: e-lactancia la califica de riesgo bajo, pero muchas instituciones desaconsejan su uso en madres lactantes y existen alternativas más eficaces.'
+        cita: Por todo ello y tener los recién nacidos una capacidad limitada de eliminación de opiáceos (Willmann 2009) y existir alternativas más eficaces, muchos autores e instituciones abogan por desaconsejar completamente su uso en niños y madres lactantes.
+        fuente: https://www.e-lactancia.org/breastfeeding/codeine/product/
+      - criterio: Si se usa, LactMed indica limitarla a 2-3 días a dosis baja, vigilando al lactante, y consultar si hay más somnolencia, dificultad para mamar o respiratoria.
+        cita: limit maternal intake of oral codeine to 2 to 3 days at a low dosage with close infant monitoring, especially in the outpatient setting.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM347/
+      - criterio: LactMed propone dextrometorfano como antitusivo alternativo (y paracetamol o ibuprofeno para el dolor).
+        cita: (Analgesia) Acetaminophen, Butorphanol, Hydromorphone, Ibuprofen, Morphine; (Antitussive) Dextromethorphan
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM347/
     no_debe:
       - "Presentarla como totalmente segura"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: riesgo en metabolizadoras ultrarrápidas del CYP2D6 (depresión respiratoria en el lactante)"
+      - "BORRADOR - revisar: la ficha técnica la contraindica o desaconseja en lactancia"
+      - "BORRADOR - revisar: alternativas más seguras si las proponen las fuentes"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: lac-amiodarona
@@ -148,13 +263,30 @@ casos:
       - {herramienta: lactmed}
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
     debe_mencionar:
+      - criterio: e-lactancia clasifica la amiodarona como riesgo alto, compatibilidad limitada (poco seguro)
+        cita: Riesgo alto. Compatibilidad limitada (poco seguro)
+        fuente: https://www.e-lactancia.org/breastfeeding/amiodarone/product/
+      - criterio: La ficha técnica contraindica la amiodarona durante la lactancia por el paso a la leche y su contenido en yodo
+        cita: Debido al paso de amiodarona a la leche materna en cantidad significativa y el contenido en yodo de esta, su administración está contraindicada durante la lactancia.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48048/FT_48048.html
+      - criterio: No se recomienda el uso crónico; si es imprescindible, son obligatorios controles periódicos cardíacos y de función tiroidea del lactante
+        cita: No es recomendable el uso crónico durante la lactancia (Hotham 2015, Tan 2001), pero si fuese preciso por mala respuesta a otras alternativas, son obligatorios los controles clínicos cardíacos y de función tiroidea en el lactante de modo periódico.
+        fuente: https://www.e-lactancia.org/breastfeeding/amiodarone/product/
+      - criterio: El uso aislado para una arritmia aguda no eleva de forma significativa los niveles en leche ni en el lactante, por lo que no precisaría suspender la lactancia
+        cita: El uso aislado para revertir una arritmia aguda no eleva de forma significativa los niveles de amiodarona en leche materna y tampoco en plasma de los lactantes, por lo que no precisaría suspensión de la lactancia.
+        fuente: https://www.e-lactancia.org/breastfeeding/amiodarone/product/
+      - criterio: Contiene mucho yodo y se ha descrito disfunción tiroidea en un lactante; la excreción puede persistir días o semanas tras suspender el fármaco
+        cita: Thyroid dysfunction was reported in one breastfed infant.
+        fuente: https://www.ncbi.nlm.nih.gov/books/n/lactmed/LM10/
+    no_debe:
+      - "Ocultar que las fuentes difieren"
+      - "Afirmar algo sin cita"
+    borrador_sin_fuente:
       - "BORRADOR - revisar: e-lactancia: riesgo alto / compatibilidad limitada"
       - "BORRADOR - revisar: la ficha técnica contraindica la lactancia"
       - "BORRADOR - revisar: distinguir dosis única/aguda de tratamiento crónico"
       - "BORRADOR - revisar: vigilar tiroides y corazón del lactante"
-    no_debe:
-      - "Ocultar que las fuentes difieren"
-      - "Afirmar algo sin cita"
+    anclado: '2026-11-21'
     revisado: false
 
   # ───────────────────────── Embarazo (3) ─────────────────────────
@@ -166,13 +298,30 @@ casos:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
       - {herramienta: notas_seguridad}
     debe_mencionar:
+      - criterio: En epilepsia, el valproato está contraindicado en el embarazo salvo que no exista otro tratamiento alternativo adecuado
+        cita: El valproato como tratamiento para la epilepsia está contraindicado en el embarazo, a menos que no exista otro tratamiento alternativo adecuado (ver secciones 4.3 y 4.4).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
+      - criterio: Riesgo de malformaciones congénitas mayores en torno al 11% con monoterapia, frente al 2-3% de la población general
+        cita: Un meta-análisis (que incluye registros y estudios cohorte) mostró que alrededor del 11% de los niños de madres epilépticas expuestas a valproato en monoterapia durante el embarazo tuvieron malformaciones congénitas mayores. Este riesgo de malformaciones mayores es más alto que el de la población general, (del 2-3%).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
+      - criterio: 'Riesgo de trastornos del neurodesarrollo: hasta 30-40% con retrasos del desarrollo temprano en preescolares expuestos en monoterapia'
+        cita: los estudios en niños en edad preescolar expuestos a valproato en el útero muestran que hasta el 30-40% experimentan retrasos en el desarrollo temprano como hablar y caminar más tarde, menor capacidad intelectual, pobre habilidad en el lenguaje (expresivo y comprensivo) y problemas de memoria.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
+      - criterio: En mujeres en edad fértil está contraindicado salvo que se cumplan las condiciones del Plan de Prevención de Embarazos
+        cita: En mujeres en edad fértil, a menos que se cumplan las condiciones del Plan de Prevención de Embarazos (ver secciones 4.4 y 4.6).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
+      - criterio: Si se queda embarazada en tratamiento, derivar de inmediato al especialista para valorar alternativas
+        cita: Si una mujer en tratamiento con valproato se queda embarazada, debe ser referida inmediatamente a un especialista para considerar otras posibles alternativas terapéuticas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/48827/FT_48827.html
+    no_debe:
+      - "Distinguir trimestres 'seguros'"
+      - "Afirmar algo sin cita"
+    borrador_sin_fuente:
       - "BORRADOR - revisar: contraindicado en el embarazo (bipolar siempre; epilepsia salvo que no haya alternativa)"
       - "BORRADOR - revisar: riesgo de malformaciones (~10%) y de trastornos del neurodesarrollo"
       - "BORRADOR - revisar: Plan de Prevención de Embarazos"
       - "BORRADOR - revisar: no suspender por cuenta propia; contactar con el especialista"
-    no_debe:
-      - "Distinguir trimestres 'seguros'"
-      - "Afirmar algo sin cita"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: emb-ibuprofeno-tercer-trimestre
@@ -181,12 +330,26 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
     debe_mencionar:
-      - "BORRADOR - revisar: contraindicado en el tercer trimestre"
-      - "BORRADOR - revisar: riesgo de cierre prematuro del ductus arterioso y oligohidramnios"
-      - "BORRADOR - revisar: paracetamol como alternativa si aparece en las fuentes"
+      - criterio: Ibuprofeno está contraindicado en el tercer trimestre del embarazo (32 semanas), así que no se debe dispensar.
+        cita: Tercer trimestre de la gestación.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
+      - criterio: En el tercer trimestre expone al feto a cierre prematuro del ductus arteriosus con hipertensión pulmonar, y a disfunción renal con oligohidramnios.
+        cita: Toxicidad cardio-pulmonar (constricción/cierre prematuro del ductus arteriosus e hipertensión pulmonar).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
+      - criterio: Al final del embarazo puede prolongar el sangrado en madre y recién nacido y retrasar o prolongar el parto.
+        cita: Inhibición de las contracciones uterinas, que puede producir retraso o prolongación del parto (con una tendencia mayor al sangrado en la madre y en el niño).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
+      - criterio: Desde la semana 20 el ibuprofeno ya puede causar oligohidramnios por disfunción renal fetal, de modo que no es seguro en ninguna fase tardía.
+        cita: A partir de la semana 20 de embarazo en adelante, ibuprofeno puede causar oligohidramniosis como consecuencia de una disfunción renal del feto.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/90878/FT_90878.html
     no_debe:
       - "Dispensarlo sin advertencia"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: contraindicado en el tercer trimestre"
+      - "BORRADOR - revisar: riesgo de cierre prematuro del ductus arterioso y oligohidramnios"
+      - "BORRADOR - revisar: paracetamol como alternativa si aparece en las fuentes"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: emb-enalapril
@@ -195,12 +358,26 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.6"}
     debe_mencionar:
-      - "BORRADOR - revisar: IECA no recomendados en el 1er trimestre y contraindicados en 2º-3º"
-      - "BORRADOR - revisar: cambiar a un antihipertensivo alternativo; derivar al médico cuanto antes"
-      - "BORRADOR - revisar: no suspender sin control médico"
+      - criterio: Los IECA no se recomiendan en el primer trimestre y están contraindicados en el segundo y tercero
+        cita: No se recomienda el uso de inhibidores de la ECA durante el primer trimestre del embarazo (ver sección 4.4). El uso de inhibidores de la ECA está contraindicado durante el segundo y tercer trimestres del embarazo (ver secciones 4.3 y 4.4).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/63355/FT_63355.html
+      - criterio: Al confirmarse el embarazo, el IECA debe interrumpirse inmediatamente y, si procede, iniciar un antihipertensivo alternativo
+        cita: Cuando se confirme el embarazo, el tratamiento con los inhibidores de la ECA debe interrumpirse inmediatamente y, si es apropiado, deberá iniciarse un tratamiento alternativo.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/63355/FT_63355.html
+      - criterio: La exposición en el 2º-3º trimestre causa toxicidad fetal y neonatal (renal, oligohidramnios, hipotensión, hiperpotasemia)
+        cita: Se sabe que la exposición al tratamiento con inhibidores de la ECA durante el segundo y tercer trimestres del embarazo produce toxicidad para el feto humano (descenso de la función renal, oligohidramnios, retraso en la osificación del cráneo) y toxicidad en recién nacidos (insuficiencia renal, hipotensión, hiperpotasemia).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/63355/FT_63355.html
+      - criterio: Si hubo exposición en el segundo trimestre, se recomienda revisión ecográfica de función renal y cráneo fetal
+        cita: Si la exposición a inhibidores de la ECA ha ocurrido durante el segundo trimestre del embarazo, se recomienda hacer una revisión ecográfica de la función renal y del cráneo.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/63355/FT_63355.html
     no_debe:
       - "Decir que puede seguir igual"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: IECA no recomendados en el 1er trimestre y contraindicados en 2º-3º"
+      - "BORRADOR - revisar: cambiar a un antihipertensivo alternativo; derivar al médico cuanto antes"
+      - "BORRADOR - revisar: no suspender sin control médico"
+    anclado: '2026-11-21'
     revisado: false
 
   # ───────────────────────── Posología y contraindicaciones (3) ─────────────────────────
@@ -211,12 +388,26 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.2"}
     debe_mencionar:
-      - "BORRADOR - revisar: 20-30 mg/kg/día repartidos en 3-4 tomas"
-      - "BORRADOR - revisar: 300-450 mg/día para 15 kg; cálculo mostrado paso a paso"
-      - "BORRADOR - revisar: volumen según la concentración de la suspensión (20 o 40 mg/ml)"
+      - criterio: La dosis diaria pediátrica (6 meses a 12 años) es de 20 a 30 mg/kg repartida en 3-4 tomas, con un intervalo mínimo de 4 horas.
+        cita: Para niños de 6 meses hasta 12 años, la dosis diaria recomendada es de 20 a 30 mg/kg de peso, repartida en tres o cuatro tomas (ver tabla). El intervalo entre dosis dependerá de la evolución de los síntomas, pero nunca será inferior a 4 horas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
+      - criterio: Con la suspensión de 20 mg/ml, un niño de unos 10-15 kg toma 5 ml 3 veces al día (300 mg/día).
+        cita: "Aprox. de 10 a 15 kg\n\n|\n\n5 ml 3 veces al día\n\n(corresponde a 300 mg de ibuprofeno/día)"
+        fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
+      - criterio: Se debe usar la dosis eficaz más baja durante el menor tiempo necesario.
+        cita: Se debe utilizar la dosis eficaz más baja durante el menor tiempo necesario para aliviar los síntomas (ver sección 4.4).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
+      - criterio: Para dosificar con exactitud, los envases incluyen una jeringa oral graduada de 5 ml.
+        cita: Para una dosificación exacta, los envases contienen una jeringa oral graduada de 5 ml.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
     no_debe:
       - "Confundir las concentraciones de 20 y 40 mg/ml"
       - "Superar la dosis máxima diaria"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: 20-30 mg/kg/día repartidos en 3-4 tomas"
+      - "BORRADOR - revisar: 300-450 mg/día para 15 kg; cálculo mostrado paso a paso"
+      - "BORRADOR - revisar: volumen según la concentración de la suspensión (20 o 40 mg/ml)"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: pos-paracetamol-45kg
@@ -225,11 +416,25 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.2"}
     debe_mencionar:
-      - "BORRADOR - revisar: en adultos de menos de 50 kg la ficha indica dosis por peso (p. ej. 15 mg/kg/toma)"
-      - "BORRADOR - revisar: máximo diario inferior a 4 g (p. ej. 60 mg/kg/día)"
+      - criterio: La posología oral de adultos (4 g/24 h máximo) está definida para peso superior a 50 kg, por lo que no se aplica sin más a una mujer de 45 kg
+        cita: "Adultos y adolescentes mayores de 15 años (y peso superior a 50 Kg)\n\nAdministrar 500 mg-1g de paracetamol (medio o 1 comprimido) cada 6-8 horas según la intensidad de los síntomas.\n\nNo se excederá de 4 g de paracetamol (4 comprimidos) en 24 horas."
+        fuente: https://cima.aemps.es/cima/dochtml/ft/70310/FT_70310.html
+      - criterio: Para pacientes de más de 33 kg y hasta 50 kg, la ficha (IV) fija 15 mg/kg por administración y un máximo de 60 mg/kg/día sin exceder 3 g
+        cita: "> 33 kg hasta ? 50 kg\n\n|\n\n15 mg/kg\n\n|\n\n1,5 ml/kg\n\n|\n\n75 ml\n\n|\n\n60 mg/kg\n\nSin exceder los 3 g"
+        fuente: https://cima.aemps.es/cima/dochtml/ft/75594/FT_75594.html
+      - criterio: El máximo diario indicado debe ajustarse si el paciente toma otros medicamentos con paracetamol
+        cita: La dosis diaria máxima que se indica en la tabla anterior hace referencia a pacientes que no están recibiendo otros medicamentos que contengan paracetamol. La dosis debe ser ajustada teniendo en cuenta estos otros medicamentos.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/75594/FT_75594.html
+      - criterio: Con insuficiencia hepática o alcoholismo crónico el máximo oral baja a 2 g/día
+        cita: En alcohólicos crónicos no se debe administrar más de 2 g/día de paracetamol.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/70310/FT_70310.html
     no_debe:
       - "Dar 4 g/día sin ajustar por peso"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: en adultos de menos de 50 kg la ficha indica dosis por peso (p. ej. 15 mg/kg/toma)"
+      - "BORRADOR - revisar: máximo diario inferior a 4 g (p. ej. 60 mg/kg/día)"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: contra-metformina-renal
@@ -238,12 +443,29 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.3"}
     debe_mencionar:
-      - "BORRADOR - revisar: contraindicada con TFG < 30 ml/min"
-      - "BORRADOR - revisar: ajuste de dosis entre 30-59 ml/min (sección 4.2)"
-      - "BORRADOR - revisar: riesgo de acidosis láctica"
+      - criterio: Con TFG < 30 ml/min la metformina está contraindicada (insuficiencia renal grave), por lo que con un FG de 25 no debe seguir tomándola.
+        cita: Insuficiencia renal grave (TFG < 30 ml/min).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
+      - criterio: La tabla de posología por TFG indica que por debajo de 30 ml/min la metformina está contraindicada, sin dosis máxima.
+        cita: Metformina está contraindicada.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
+      - criterio: La metformina está contraindicada en cualquier acidosis metabólica aguda, como la acidosis láctica.
+        cita: Cualquier tipo de acidosis metabólica aguda (como acidosis láctica, cetoacidosis diabética).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
+      - criterio: Con TFG de 30-44 ml/min la dosis diaria máxima es de 1.000 mg, y con 45-59 ml/min es de 2.000 mg (la dosis de inicio es, a lo sumo, la mitad de la máxima). Esta es la situación inmediatamente superior al caso consultado.
+        cita: La dosis de inicio es, a lo sumo, la mitad de la dosis máxima.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
+      - criterio: La función renal (TFG) debe evaluarse antes de iniciar metformina y al menos una vez al año, con más frecuencia en pacientes de edad avanzada o con riesgo de progresión de la insuficiencia renal.
+        cita: Se debe evaluar la TFG antes de iniciar el tratamiento con productos que contengan metformina y, al menos, una vez al año a partir de entonces.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/68167/FT_68167.html
     no_debe:
       - "Decir que puede seguir con la misma dosis"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: contraindicada con TFG < 30 ml/min"
+      - "BORRADOR - revisar: ajuste de dosis entre 30-59 ml/min (sección 4.2)"
+      - "BORRADOR - revisar: riesgo de acidosis láctica"
+    anclado: '2026-11-21'
     revisado: false
 
   # ───────────────────────── Reacciones adversas (1) ─────────────────────────
@@ -254,12 +476,26 @@ casos:
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: "4.8"}
     debe_mencionar:
-      - "BORRADOR - revisar: mialgia es una reacción adversa descrita (frecuencia según la ficha)"
-      - "BORRADOR - revisar: miopatía/rabdomiólisis como reacción rara pero grave (CK)"
-      - "BORRADOR - revisar: derivar al médico si dolor intenso, debilidad u orina oscura"
+      - criterio: Mialgia y dolor en las extremidades son reacciones adversas frecuentes de atorvastatina, así que el dolor de piernas puede deberse al fármaco
+        cita: 'Frecuentes: mialgia, artralgia, dolor en las extremidades, espasmos musculares, hinchazón en las articulaciones, dolor de espalda.'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82601/FT_82601.html
+      - criterio: Miopatía, miositis y rabdomiolisis son reacciones raras pero graves, con CK elevada
+        cita: 'Raras: miopatía, miositis, rabdomiolisis, tendinopatía a veces complicada con ruptura.'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82601/FT_82601.html
+      - criterio: El paciente debe comunicar rápidamente dolor, calambres o debilidad muscular (sobre todo con fiebre o malestar) y se determinará la CK
+        cita: Debe indicarse a los pacientes que comuniquen rápidamente cualquier dolor, calambres o debilidad muscular, especialmente si se acompaña de fiebre y malestar
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82601/FT_82601.html
+      - criterio: Si hay CK >5 veces lo normal se interrumpe el tratamiento; si los síntomas son severos y diarios se valora suspender aunque la CK no esté tan elevada
+        cita: En los casos en los que los síntomas sean severos y supongan molestias diarias para el paciente, se debe valorar la interrupción del tratamiento, incluso aunque los niveles de CK se encuentren elevados ≤ 5 veces el valor máximo de normalidad
+        fuente: https://cima.aemps.es/cima/dochtml/ft/82601/FT_82601.html
     no_debe:
       - "Recomendar suspender la estatina por su cuenta"
       - "Afirmar algo sin cita"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: mialgia es una reacción adversa descrita (frecuencia según la ficha)"
+      - "BORRADOR - revisar: miopatía/rabdomiólisis como reacción rara pero grave (CK)"
+      - "BORRADOR - revisar: derivar al médico si dolor intenso, debilidad u orina oscura"
+    anclado: '2026-11-21'
     revisado: false
 
   # ───────────────────────── Suministro (2) ─────────────────────────
@@ -283,10 +519,18 @@ casos:
     debe_consultar:
       - {herramienta: problemas_suministro}
     debe_mencionar:
-      - "BORRADOR - revisar: identifica el medicamento del CN (citicolina Pensa Pharma 1000 mg, a 21/11/2026)"
-      - "BORRADOR - revisar: estado actual del problema y fechas"
+      - criterio: El CN 730228 es Citicolina Pensa Pharma 1000 mg solución oral, envase de 30 sobres de 10 ml
+        cita: CITICOLINA PENSA PHARMA 1000 MG SOLUCION ORAL EFG,30 sobres de 10 ml (3 x 10)
+        fuente: https://cima.aemps.es/cima/publico/listadesabastecimiento.html
+      - criterio: La AEMPS indica que existen otros medicamentos con el mismo principio activo y misma vía de administración (alternativa)
+        cita: Existe/n otro/s medicamento/s con el mismo principio activo y para la misma vía de administración.
+        fuente: https://cima.aemps.es/cima/publico/listadesabastecimiento.html
     no_debe:
       - "Confundir el CN con un nº de registro"
+    borrador_sin_fuente:
+      - "BORRADOR - revisar: identifica el medicamento del CN (citicolina Pensa Pharma 1000 mg, a 21/11/2026)"
+      - "BORRADOR - revisar: estado actual del problema y fechas"
+    anclado: '2026-11-21'
     revisado: false
 
   - id: sum-cn-de-presentacion

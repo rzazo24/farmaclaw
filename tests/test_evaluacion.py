@@ -192,3 +192,149 @@ def test_juez_correcto_y_iconos(monkeypatch):
     assert ev.resumen_juez(j)[0] == "🟡"
     j["veredictos"][0]["veredicto"] = "no_cumple"
     assert ev.resumen_juez(j)[0] == "❌"
+
+
+# ───────────────────────── Segunda opinión ─────────────────────────
+
+def test_segunda_opinion_solo_para_dudosos_y_solo_si_es_concluyente(monkeypatch):
+    llamadas = []
+    respuestas = [
+        # 1ª: M1 dudoso, N1 cumple
+        _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "dudoso", "evidencia": ""},
+                      {"id": "N1", "criterio": "b", "veredicto": "cumple", "evidencia": ""}]),
+        # 2ª (solo M1): cumple con evidencia literal
+        _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "cumple", "evidencia": "puede administrarse con pantoprazol"}]),
+    ]
+
+    class Proc:
+        stderr = ""
+
+    def falso(cmd, **k):
+        llamadas.append(cmd[cmd.index("--model") + 1])
+        p = Proc()
+        p.stdout = respuestas[len(llamadas) - 1]
+        return p
+
+    monkeypatch.setattr(ev.subprocess, "run", falso)
+    j = ev.juzgar(CASO_JUEZ, RESPUESTA, "sonnet", segunda="opus")
+    assert llamadas == ["sonnet", "opus"]
+    assert j["veredictos"][0]["veredicto"] == "cumple"
+    assert j["veredictos"][0]["segunda_opinion"] == {"modelo": "opus", "veredicto": "cumple"}
+    assert "segunda_opinion" not in j["veredictos"][1]
+
+
+def test_sin_dudosos_no_hay_segunda_llamada(monkeypatch):
+    llamadas = []
+
+    class Proc:
+        stderr = ""
+        stdout = _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "cumple", "evidencia": "puede administrarse con pantoprazol"},
+                               {"id": "N1", "criterio": "b", "veredicto": "cumple", "evidencia": ""}])
+
+    monkeypatch.setattr(ev.subprocess, "run", lambda *a, **k: llamadas.append(1) or Proc())
+    ev.juzgar(CASO_JUEZ, RESPUESTA, "sonnet", segunda="opus")
+    assert len(llamadas) == 1
+
+
+def test_segunda_opinion_dudosa_no_sustituye(monkeypatch):
+    respuestas = iter([
+        _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "dudoso", "evidencia": ""},
+                      {"id": "N1", "criterio": "b", "veredicto": "cumple", "evidencia": ""}]),
+        _salida_juez([{"id": "M1", "criterio": "a", "veredicto": "dudoso", "evidencia": ""}]),
+    ])
+
+    class Proc:
+        stderr = ""
+
+    def falso(*a, **k):
+        p = Proc()
+        p.stdout = next(respuestas)
+        return p
+
+    monkeypatch.setattr(ev.subprocess, "run", falso)
+    j = ev.juzgar(CASO_JUEZ, RESPUESTA, "sonnet", segunda="opus")
+    assert j["veredictos"][0]["veredicto"] == "dudoso"
+    assert j["veredictos"][0]["segunda_opinion"]["veredicto"] == "dudoso"
+
+
+# ───────────────────────── Criterios anclados ─────────────────────────
+
+def test_criterios_anclados_conservan_cita_y_fuente():
+    caso = {"debe_mencionar": [{"criterio": "La ficha desaconseja omeprazol.", "cita": "debe desaconsejarse",
+                                "fuente": "https://cima.aemps.es/x"}, "BORRADOR - revisar: otro"]}
+    c = ev.criterios(caso)
+    assert c[0]["criterio"] == "La ficha desaconseja omeprazol." and c[0]["fuente"] == "https://cima.aemps.es/x"
+    assert c[1]["criterio"] == "otro" and "cita" not in c[1]
+
+
+# ───────────────────────── Comparación y aceptados ─────────────────────────
+
+def _res(id_, veredictos, auto_ok=True):
+    return {"id": id_, "categoria": "interaccion", "caso": {"pregunta": "p"}, "respuesta": "r", "llamadas": [],
+            "comprobaciones": [{"comprobacion": "Aviso de Bot PLUS", "ok": auto_ok, "detalle": ""}],
+            "juez": {"estado": "juzgado", "modelo": "sonnet",
+                     "veredictos": [{"id": i, "tipo": "debe_mencionar", "criterio": c, "veredicto": v, "evidencia": ""}
+                                    for i, c, v in veredictos]}}
+
+
+def test_problemas_excluye_aceptados():
+    r = _res("x", [("M1", "pantoprazol", "dudoso"), ("M2", "CYP2C19", "no_cumple")], auto_ok=False)
+    p = ev.problemas(r, {("x", "pantoprazol")})
+    assert "juez:pantoprazol" not in p
+    assert "juez:CYP2C19" in p and "auto:Aviso de Bot PLUS" in p
+
+
+def test_informe_separa_nuevos_de_ya_vistos(tmp_path, monkeypatch):
+    monkeypatch.setattr(ev, "RESULTADOS", tmp_path)
+    monkeypatch.setattr(ev, "ACEPTADOS", tmp_path / "aceptados.yaml")
+    anterior = tmp_path / "2026-01-01_000000"
+    anterior.mkdir()
+    (anterior / "x.json").write_text(json.dumps({k: v for k, v in _res("x", [("M1", "viejo", "dudoso"), ("M2", "bien", "cumple")]).items() if k != "caso"}))
+    actual = tmp_path / "2026-01-02_000000"
+    actual.mkdir()
+    r = _res("x", [("M1", "viejo", "dudoso"), ("M2", "bien", "no_cumple")])
+    texto = ev.informe(actual, [r], "abc").read_text()
+    para_revisar = texto.split("## Para revisar")[1].split("## Resumen")[0]
+    nuevos = para_revisar.split("<details>")[0]
+    assert "M2: bien" in nuevos            # empeoró: nuevo
+    assert "M1: viejo" not in nuevos        # ya fallaba: va al desplegable
+    assert "Ya fallaban en la ejecución anterior (1)" in para_revisar
+    assert "Comparado con: 2026-01-01_000000" in texto
+
+
+def test_aceptar_y_que_no_vuelva_a_salir(tmp_path, monkeypatch):
+    monkeypatch.setattr(ev, "RESULTADOS", tmp_path)
+    monkeypatch.setattr(ev, "ACEPTADOS", tmp_path / "aceptados.yaml")
+    d = tmp_path / "2026-01-01_000000"
+    d.mkdir()
+    r = _res("x", [("N3", "Afirmar algo sin cita", "dudoso")])
+    (d / "x.json").write_text(json.dumps({k: v for k, v in r.items() if k != "caso"}))
+    ev.aceptar("x:N3", "recomendación práctica razonable")
+    assert ("x", "Afirmar algo sin cita") in ev.cargar_aceptados()
+    actual = tmp_path / "2026-01-02_000000"
+    actual.mkdir()
+    assert "Nada nuevo ✅" in ev.informe(actual, [r], "abc").read_text()
+
+
+# ───────────────────────── Anclaje: verificación de citas ─────────────────────────
+
+import importlib.util as _ilu  # noqa: E402
+import sys as _sys  # noqa: E402
+
+_sys.path.insert(0, str(_ruta.parent))
+_spec_a = _ilu.spec_from_file_location("evaluacion_anclar", _ruta.parent / "anclar.py")
+anclar = _ilu.module_from_spec(_spec_a)
+_spec_a.loader.exec_module(anclar)
+
+
+def test_anclaje_acepta_solo_citas_literales_con_url_devuelta():
+    resultado = json.dumps({"fuente": "https://cima.aemps.es/ft/1.html",
+                            "texto": "Como precaución debe desaconsejarse el uso concomitante de omeprazol.\nOtra frase."})
+    fuentes = anclar.texto_fuentes([{"herramienta": "mcp__cima__ficha_tecnica_seccion", "resultado": resultado}])
+    validos, descartados = anclar.verificar([
+        {"criterio": "ok", "cita": "debe desaconsejarse el uso concomitante de omeprazol", "fuente": "https://cima.aemps.es/ft/1.html"},
+        {"criterio": "inventada", "cita": "está totalmente contraindicado con omeprazol", "fuente": "https://cima.aemps.es/ft/1.html"},
+        {"criterio": "url ajena", "cita": "debe desaconsejarse el uso concomitante de omeprazol", "fuente": "https://otra.web/x"},
+    ], fuentes)
+    assert [v["criterio"] for v in validos] == ["ok"]
+    assert [d["motivo"] for d in descartados] == ["cita no literal", "URL no devuelta por ninguna herramienta"]
