@@ -38,5 +38,10 @@ for farmaco in ("omeprazol", "clopidogrel"):
 
 ver("problemas_suministro('80477')", s.problemas_suministro, "80477")
 ver("problemas_suministro('citicolina')", s.problemas_suministro, "citicolina")
+ver("buscar por CN de la caja (712729.8, Aspirina C)", s.buscar_medicamento, "712729.8")
+ver("problemas_suministro por CN (730228)", s.problemas_suministro, "730228")
+ver("notas_seguridad ácido valproico (68033)", s.notas_seguridad, "68033")
+ver("notas_seguridad sin notas (clopidogrel 71774)", s.notas_seguridad, "71774")
+ver("materiales_informativos ácido valproico (68033)", s.materiales_informativos, "68033")
 ver("error esperado: nregistro inexistente", s.ficha_tecnica_seccion, "999999999", "4.3")
 ver("error esperado: sección inexistente", s.ficha_tecnica_seccion, nreg, "9.9")

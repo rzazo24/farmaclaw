@@ -9,7 +9,8 @@ import logging
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from html.parser import HTMLParser
 
 import httpx
@@ -25,6 +26,7 @@ TIMEOUT = 15.0
 CACHE_TTL = 3600  # 1 h: fichas y estados cambian poco
 MAX_CHARS = 8000  # límite de texto por sección para mantener respuestas compactas
 MAX_RESULTADOS = 15
+MADRID = ZoneInfo("Europe/Madrid")
 
 TIPO_DOC = {"ficha": 1, "prospecto": 2}
 
@@ -114,7 +116,8 @@ def _limpiar_html(contenido: str) -> str:
 def _fecha(ms: int | None) -> str | None:
     if not ms:
         return None
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+    # CIMA da las fechas como medianoche de Madrid; en UTC caerían el día anterior.
+    return datetime.fromtimestamp(ms / 1000, tz=MADRID).strftime("%Y-%m-%d")
 
 
 def _medicamento(nregistro: str) -> dict:
@@ -125,8 +128,17 @@ def _medicamento(nregistro: str) -> dict:
 
 
 def _buscar(texto: str) -> list[dict]:
-    """Busca primero por nombre comercial y, si no hay nada, por principio activo."""
+    """Busca por código nacional o nº de registro (si son dígitos), nombre comercial o principio activo."""
     texto = texto.strip()
+    codigo = texto.split(".")[0]  # el CN de la caja puede llevar dígito de control: "712729.8"
+    if codigo.isdigit():
+        # Un CN tiene 6-7 dígitos; si no casa como CN, se prueba como nº de registro.
+        params = [{"cn": codigo}, {"nregistro": codigo}] if len(codigo) in (6, 7) else [{"nregistro": codigo}]
+        for p in params:
+            med = _get("/medicamento", p)
+            if med:
+                return [med]
+        return []
     for campo in ("nombre", "practiv1"):
         data = _get("/medicamentos", {campo: texto})
         if data and data.get("resultados"):
@@ -141,6 +153,8 @@ def _resumen(m: dict) -> dict:
         "laboratorio": m.get("labtitular"),
         "comercializado": m.get("comerc"),
         "problemas_suministro": m.get("psum"),
+        "notas_seguridad": m.get("notas"),
+        "materiales_informativos": m.get("materialesInf"),
         "receta": m.get("cpresc"),
         "fuente": WEB.format(m["nregistro"]),
     }
@@ -148,7 +162,8 @@ def _resumen(m: dict) -> dict:
 
 @mcp.tool()
 def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: bool = False) -> dict:
-    """Busca medicamentos autorizados en España por nombre comercial o principio activo.
+    """Busca medicamentos autorizados en España por nombre comercial, principio activo,
+    código nacional (CN de la caja, p. ej. "712729") o nº de registro.
 
     Devuelve una lista breve (máx. 15) con nregistro, nombre, laboratorio,
     si está comercializado y si tiene problemas de suministro. Usa el
@@ -247,14 +262,17 @@ def _problemas_de(med: dict) -> list[dict]:
 
 @mcp.tool()
 def problemas_suministro(nregistro_o_nombre: str) -> dict:
-    """Consulta problemas de suministro por nº de registro o por nombre/principio activo.
+    """Consulta problemas de suministro por nº de registro, código nacional (CN) o nombre/principio activo.
 
     Devuelve, por presentación (código nacional), si el problema está
     activo, fechas de inicio y fin prevista y observaciones de la AEMPS.
     """
     consulta = nregistro_o_nombre.strip()
-    if consulta.isdigit():
-        candidatos = [_medicamento(consulta)]
+    if consulta.split(".")[0].isdigit():  # CN o nº de registro
+        encontrados = _buscar(consulta)
+        if not encontrados:
+            raise ToolError(f"No se ha encontrado ningún medicamento con el código {consulta} en CIMA.")
+        candidatos = encontrados
     else:
         encontrados = _buscar(consulta)
         if not encontrados:
@@ -274,6 +292,58 @@ def problemas_suministro(nregistro_o_nombre: str) -> dict:
         "con_problemas": len(salida),
         "resultado": salida or "Sin problemas de suministro registrados en CIMA.",
         "fuente": "https://cima.aemps.es/cima/publico/listadesabastecimiento.html",
+    }
+
+
+@mcp.tool()
+def notas_seguridad(nregistro: str) -> dict:
+    """Notas informativas de seguridad de la AEMPS sobre un medicamento (más recientes primero).
+
+    Devuelve fecha, referencia, asunto y enlace a cada nota. Útil para alertas
+    de farmacovigilancia (nuevos riesgos, restricciones de uso).
+    """
+    med = _medicamento(nregistro)
+    notas = _get(f"/notas/{med['nregistro']}") or []
+    notas = sorted(notas, key=lambda n: n.get("fecha") or 0, reverse=True)
+    return {
+        "medicamento": med["nombre"],
+        "nregistro": med["nregistro"],
+        "total": len(notas),
+        "notas": [{
+            "fecha": _fecha(n.get("fecha")),
+            "referencia": n.get("referencia"),
+            "asunto": n.get("asunto"),
+            "fuente": n.get("url"),
+        } for n in notas[:MAX_RESULTADOS]] or "Sin notas de seguridad de la AEMPS para este medicamento.",
+        "fuente": WEB.format(med["nregistro"]),
+    }
+
+
+@mcp.tool()
+def materiales_informativos(nregistro: str) -> dict:
+    """Materiales informativos de seguridad aprobados por la AEMPS (guías para
+    profesionales, tarjetas o guías para pacientes, vídeos) con sus enlaces.
+    """
+    med = _medicamento(nregistro)
+    data = _get(f"/materiales/{med['nregistro']}") or {}
+    materiales = []
+    # La respuesta agrupa por destinatario: listaDocsProfesional, listaDocsPaciente...
+    for clave, docs in data.items():
+        if not isinstance(docs, list):
+            continue
+        destinatario = clave.removeprefix("listaDocs").removeprefix("lista").lower() or clave
+        for d in docs:
+            materiales.append({
+                "destinatario": destinatario,
+                "nombre": d.get("nombre"),
+                "fecha": _fecha(d.get("fecha")),
+                "fuente": d.get("url"),
+            })
+    return {
+        "medicamento": med["nombre"],
+        "nregistro": med["nregistro"],
+        "materiales": materiales or "Sin materiales informativos de seguridad para este medicamento.",
+        "fuente": WEB.format(med["nregistro"]),
     }
 
 

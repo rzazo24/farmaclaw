@@ -2,7 +2,7 @@
 
 Agente de research para consejo farmacéutico que funciona dentro de Claude Code. Consulta fuentes fiables mediante servidores MCP propios (stdio, Python + FastMCP):
 
-- **cima** (`mcp/cima/server.py`): API REST de CIMA (AEMPS). Medicamentos autorizados en España, fichas técnicas, prospectos y problemas de suministro.
+- **cima** (`mcp/cima/server.py`): API REST de CIMA (AEMPS). Medicamentos autorizados en España (por nombre, principio activo o CN), fichas técnicas, prospectos, problemas de suministro, notas de seguridad y materiales informativos.
 - **pubmed** (`mcp/pubmed/server.py`): NCBI E-utilities. Búsqueda de artículos y abstracts.
 
 Ambos se registran en `.mcp.json` y Claude Code los arranca solo.
@@ -27,6 +27,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - CIMA: `/psuministro?nregistro=` ignora el parámetro; hay que ir por presentación: `/psuministro/{cn}`.
 - CIMA: una sección inexistente devuelve 200 con `{"error": ...}`.
 - CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol").
+- CIMA: las fechas son medianoche de Madrid en ms; convertir con `Europe/Madrid`, no UTC (saldría el día anterior).
 - PubMed: artículos recientes pueden no tener MeSH todavía.
 
 ## Cómo probar

@@ -44,10 +44,12 @@ Están en `.claude/commands/` y todos delegan en el agente `research`.
 ## Herramientas
 | Servidor | Herramienta | Qué hace |
 |---|---|---|
-| cima | `buscar_medicamento` | Busca por nombre o principio activo |
+| cima | `buscar_medicamento` | Busca por nombre, principio activo o código nacional (CN) |
 | cima | `ficha_tecnica_seccion` | Una sección de la ficha técnica (4.2, 4.5, "interacciones"…) |
 | cima | `prospecto_seccion` | Una sección del prospecto (1-6) |
 | cima | `problemas_suministro` | Estado y fechas por presentación |
+| cima | `notas_seguridad` | Notas informativas de seguridad de la AEMPS |
+| cima | `materiales_informativos` | Guías de seguridad para profesionales y pacientes |
 | pubmed | `buscar_articulos` | Búsqueda con filtros de tipo y año |
 | pubmed | `obtener_resumen` | Abstract, MeSH, DOI y enlace a PMC |
 
