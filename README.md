@@ -2,7 +2,12 @@
 
 Agente de research para consejo farmacéutico dentro de Claude Code. Responde con información de **CIMA (AEMPS)**, **PubMed**, **LactMed** y **e-lactancia**, citando cada afirmación.
 
-> Herramienta de apoyo para profesionales. No sustituye el juicio clínico ni las bases de datos de interacciones (Bot PLUS).
+> [!WARNING]
+> **Herramienta de apoyo para profesionales sanitarios. No es un producto sanitario.**
+> - No sustituye el juicio clínico ni las bases de datos de referencia (p. ej. Bot PLUS para interacciones).
+> - Las respuestas las genera un modelo de IA a partir de fuentes externas: pueden contener errores, omisiones o información desactualizada. Comprueba siempre la fuente enlazada.
+> - La decisión clínica es siempre responsabilidad del profesional.
+> - No introduzcas datos identificativos de pacientes.
 
 ## Instalación (Ubuntu)
 ```bash
@@ -43,6 +48,8 @@ La primera vez, aprueba los servidores MCP del proyecto (o revisa `/mcp`). Despu
 Desde el iPhone: activa `/remote-control` en la sesión de tmux.
 
 ### Arranque automático (siempre disponible en el móvil)
+> Los servicios de `systemd/` asumen que el proyecto está en `~/farmaclaw`. Si lo clonas en otra ruta, ajusta `%h/farmaclaw` en los `.service`.
+
 Un servicio de systemd de usuario abre al encender la VM una sesión tmux `farmaclaw` con `claude --remote-control Farmaclaw`. Si la sesión ya existe, no hace nada.
 ```bash
 # Instalación (una vez; requiere linger: `loginctl enable-linger $USER`)
@@ -90,12 +97,18 @@ claude mcp list
 
 ## Estructura
 ```
-.mcp.json                  servidores MCP del proyecto
-CLAUDE.md                  contexto para Claude Code
-.claude/agents/research.md agente farmacéutico investigador
-mcp/cima/server.py         MCP de CIMA
-mcp/pubmed/server.py       MCP de PubMed (+ LactMed)
-mcp/elactancia/server.py   MCP de e-lactancia
+.mcp.json                        servidores MCP del proyecto
+CLAUDE.md                        contexto para Claude Code
+.claude/agents/research.md       agente farmacéutico investigador
+.claude/commands/                comandos rápidos (/interaccion, /dosis, /lactancia…)
+mcp/cima/server.py               MCP de CIMA (AEMPS)
+mcp/pubmed/server.py             MCP de PubMed (+ herramienta LactMed)
+mcp/pubmed/lactmed.py            descarga y búsqueda del índice local de LactMed
+mcp/elactancia/server.py         MCP de e-lactancia
+mcp/*/test_*.py                  pruebas rápidas con casos reales
+scripts/arrancar.sh              sesión tmux con Claude Code + Remote Control
+systemd/                         servicio de arranque y temporizador mensual de LactMed
+data/                            índices descargados (no se sube a git)
 ```
 
 ## Licencia
