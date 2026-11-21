@@ -14,6 +14,7 @@ Las notas se muestran en pantalla para que Claude las lea; no se escriben en el 
 """
 
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -21,6 +22,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 CASOS = Path(__file__).with_name("casos.yaml")
+BORRADOR = re.compile(r"^\s*BORRADOR\s*-\s*revisar\s*:\s*", re.I)
 
 
 def aplicar(caso, rev: dict) -> list[str]:
@@ -50,6 +52,12 @@ def aplicar(caso, rev: dict) -> list[str]:
 
     total = len(caso.get("debe_mencionar") or []) + len(caso.get("no_debe") or [])
     if rev.get("validado") and total:
+        # Validado por el farmacéutico: los criterios dejan de ser borradores.
+        for campo in ("debe_mencionar", "no_debe"):
+            for i, item in enumerate(caso.get(campo) or []):
+                if isinstance(item, str) and BORRADOR.match(item):
+                    caso[campo][i] = BORRADOR.sub("", item)
+        caso.pop("borrador_sin_fuente", None)  # solo servía de referencia para revisar
         caso["revisado"] = True
         caso["revisado_fecha"] = date.today().isoformat()
         caso["revisado"] = caso.pop("revisado")  # revisado al final
