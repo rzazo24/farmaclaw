@@ -8,3 +8,6 @@ __pycache__/
 
 # Secretos
 .env
+
+# Índices descargados (se regeneran con sus scripts)
+data/

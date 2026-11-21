@@ -17,6 +17,12 @@ export NCBI_API_KEY=tu_clave     # https://www.ncbi.nlm.nih.gov/account/settings
 export NCBI_EMAIL=tu@correo
 ```
 
+### Índice de LactMed
+LactMed se descarga completo del FTP del NCBI (su web bloquea accesos automáticos) y se guarda en `data/lactmed.json.gz` (no se sube a git). Crearlo o actualizarlo (~1 min):
+```bash
+uv run python mcp/pubmed/lactmed.py
+```
+
 ## Uso
 ```bash
 tmux new -s farmaclaw
@@ -48,7 +54,7 @@ systemctl --user status farmaclaw         # ver el estado del servicio
 |---|---|---|
 | `/interaccion` | `/interaccion omeprazol clopidogrel` | Lee la 4.5 de todos los fármacos; mecanismo, relevancia y manejo |
 | `/embarazo` | `/embarazo ibuprofeno tercer trimestre` | Ficha 4.6 + metaanálisis recientes |
-| `/lactancia` | `/lactancia sertralina` | Ficha 4.6 + datos de paso a leche |
+| `/lactancia` | `/lactancia sertralina` | Ficha 4.6 + LactMed |
 | `/dosis` | `/dosis ibuprofeno niños 15 kg` | Ficha 4.2, con cálculo por peso y ajustes renal/hepático |
 | `/suministro` | `/suministro citicolina` | Problemas activos, fechas y alternativas comercializadas |
 
@@ -65,6 +71,7 @@ Están en `.claude/commands/` y todos delegan en el agente `research`.
 | cima | `materiales_informativos` | Guías de seguridad para profesionales y pacientes |
 | pubmed | `buscar_articulos` | Búsqueda con filtros de tipo y año |
 | pubmed | `obtener_resumen` | Abstract, MeSH, DOI y enlace a PMC |
+| pubmed | `lactmed` | LactMed: uso en lactancia, niveles en leche, efectos en el lactante, alternativas |
 
 ## Pruebas
 ```bash

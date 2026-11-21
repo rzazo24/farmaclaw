@@ -16,12 +16,15 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 
+import lactmed as lactmed_idx  # mismo directorio: Python añade la carpeta del script a sys.path
+
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s pubmed %(levelname)s %(message)s")
 log = logging.getLogger("pubmed")
 
 BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 FUENTE = "https://pubmed.ncbi.nlm.nih.gov/{}/"
 PMC = "https://www.ncbi.nlm.nih.gov/pmc/articles/{}/"
+FUENTE_LACTMED = lactmed_idx.FUENTE
 TIMEOUT = 15.0
 CACHE_TTL = 3600
 MAX_RESULTADOS = 30
@@ -218,6 +221,86 @@ def obtener_resumen(pmids: list[str]) -> dict:
     if no_encontrados:
         salida["no_encontrados"] = no_encontrados
     return salida
+
+
+SECCIONES_LACTMED = {
+    "resumen": "Resumen de uso en la lactancia + alternativas + clase",
+    "niveles": "Niveles en leche materna y en el lactante",
+    "efectos_lactante": "Efectos descritos en lactantes",
+    "efectos_lactancia": "Efectos sobre la producción de leche",
+    "alternativas": "Fármacos alternativos a considerar",
+}
+MAX_LACTMED = 8000  # caracteres por parte; las secciones de detalle pueden pasar de 10.000
+
+
+def _partir(texto: str) -> list[str]:
+    """Divide en partes de hasta MAX_LACTMED caracteres, cortando por párrafos."""
+    partes = []
+    while len(texto) > MAX_LACTMED:
+        corte = texto.rfind("\n", 0, MAX_LACTMED)
+        if corte < MAX_LACTMED // 2:
+            corte = MAX_LACTMED
+        partes.append(texto[:corte].strip())
+        texto = texto[corte:].strip()
+    partes.append(texto)
+    return partes
+
+
+@mcp.tool()
+def lactmed(farmaco: str, seccion: str = "resumen", parte: int = 1) -> dict:
+    """Consulta LactMed (NCBI), la base de datos de referencia de fármacos y lactancia.
+
+    farmaco: nombre en INGLÉS (DCI o nombre estadounidense), p. ej. "sertraline",
+      "valproic acid", "acetaminophen". Acepta también paracetamol, salbutamol,
+      metamizole y otras equivalencias habituales.
+    seccion: "resumen" (por defecto: resumen de uso, alternativas y clase),
+      "niveles", "efectos_lactante", "efectos_lactancia" o "alternativas".
+    parte: las secciones largas se devuelven por partes; si total_partes > 1,
+      pide parte=2, 3...
+    Las citas del texto vienen como [PMID: ...] y se pueden ampliar con obtener_resumen.
+    """
+    if lactmed_idx.cargar() is None:
+        raise ToolError("El índice local de LactMed no existe. Créalo con: uv run python mcp/pubmed/lactmed.py")
+    if seccion not in SECCIONES_LACTMED:
+        raise ToolError(f"Sección no válida: {seccion}. Usa: {', '.join(SECCIONES_LACTMED)}")
+
+    encontradas = lactmed_idx.buscar(farmaco)
+    if not encontradas:
+        raise ToolError(f"No he encontrado «{farmaco}» en LactMed. Prueba con el nombre en inglés (DCI o USAN).")
+    q = lactmed_idx.SINONIMOS.get(farmaco.strip().lower(), farmaco.strip().lower())
+    if len(encontradas) > 1 and encontradas[0]["titulo"].lower() != q:
+        return {"aviso": "Varias fichas coinciden; repite la consulta con el nombre exacto.",
+                "candidatos": [f["titulo"] for f in encontradas[:15]]}
+    f = encontradas[0]
+    sec = f["secciones"]
+
+    if seccion == "resumen":
+        texto = sec.get("resumen", "")
+        partes = [texto]
+        extra = {"alternativas": sec.get("alternativas") or "LactMed no propone alternativas.",
+                 "clase": sec.get("clase", "").replace("\n", ", ")}
+    else:
+        texto = sec.get(seccion)
+        if not texto:
+            raise ToolError(f"La ficha de {f['titulo']} en LactMed no tiene la sección «{seccion}».")
+        partes = _partir(texto)
+        extra = {}
+    if not 1 <= parte <= len(partes):
+        raise ToolError(f"La sección {seccion} tiene {len(partes)} parte(s); has pedido la parte {parte}.")
+    aviso = f"\n[… continúa: pide parte={parte + 1} de {len(partes)}]" if parte < len(partes) else ""
+
+    return {
+        "farmaco": f["titulo"],
+        "seccion": seccion,
+        "parte": parte,
+        "total_partes": len(partes),
+        "texto": partes[parte - 1] + aviso,
+        **extra,
+        "secciones_disponibles": [k for k in SECCIONES_LACTMED if k in sec or k == "resumen"],
+        "revisado_lactmed": f["revisado"],
+        "indice_local_generado": lactmed_idx.cargar()["generado"],
+        "fuente": FUENTE_LACTMED.format(f["id"]),
+    }
 
 
 if __name__ == "__main__":
