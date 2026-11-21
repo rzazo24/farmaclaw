@@ -68,7 +68,7 @@ Escribe la pregunta en lenguaje natural o usa un comando rápido:
 Ejemplos de preguntas libres:
 - "¿Qué dice la ficha técnica del clopidogrel sobre el omeprazol?"
 - "¿Hay metaanálisis recientes sobre IBP y clopidogrel?"
-- "¿Qué es el CN 712729?"
+- "¿Qué es el CN 712729?" / "¿Qué CN tiene la Aspirina C de 20 comprimidos?"
 
 Cada consulta completa tarda **1-2 minutos**: el agente lee varias fichas y artículos antes de responder.
 
@@ -96,6 +96,7 @@ Definido en `.claude/agents/research.md`. Solo tiene acceso a las herramientas d
 | `buscar_medicamento` | Busca medicamentos autorizados en España | Acepta nombre comercial, principio activo, código nacional (CN, también con dígito de control: `712729.8`) o nº de registro. Busca a la vez por nombre y por principio activo (así salen genéricos y marcas). Muestra hasta 15, primero los comercializados que empiezan por lo buscado |
 | `ficha_tecnica_seccion` | Una sección de la ficha técnica | Por número (`4.2`, `4.5`…) o alias (`posologia`, `contraindicaciones`, `interacciones`, `embarazo`, `reacciones adversas`…). Texto limpio, sin HTML |
 | `prospecto_seccion` | Una sección del prospecto (1-6) | Alias: `qué es`, `antes de tomar`, `cómo tomar`, `efectos adversos`, `conservación`, `composición` |
+| `presentaciones` | Envases del medicamento con su CN | Acepta nº de registro o CN. Por envase: CN, nombre (tamaño), comercializado y problemas de suministro |
 | `problemas_suministro` | Problemas de suministro por presentación | Acepta nombre, principio activo, nº de registro o CN. Estado, fecha de inicio, fin prevista y observaciones |
 | `notas_seguridad` | Notas informativas de seguridad de la AEMPS | Más recientes primero, con enlace a cada nota |
 | `materiales_informativos` | Guías de seguridad aprobadas por la AEMPS | Para profesionales y pacientes (guías, tarjetas, formularios) |

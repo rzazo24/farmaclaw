@@ -289,6 +289,18 @@ casos:
       - "Confundir el CN con un nº de registro"
     revisado: false
 
+  - id: sum-cn-de-presentacion
+    categoria: suministro
+    pregunta: "¿Qué CN tiene la Aspirina C de 20 comprimidos?"
+    debe_consultar:
+      - {herramienta: presentaciones}
+    debe_mencionar:
+      - "BORRADOR - revisar: CN 651877 (Aspirina C 400 mg/240 mg, 20 comprimidos efervescentes; dato de CIMA a 21/11/2026)"
+    no_debe:
+      - "Dar el CN del envase de 10 comprimidos"
+      - "Inventar un CN"
+    revisado: false
+
   # ───────────────────────── Sin evidencia / trampas (2) ─────────────────────────
 
   - id: trampa-farmaco-inexistente

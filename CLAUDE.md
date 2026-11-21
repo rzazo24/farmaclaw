@@ -2,14 +2,14 @@
 
 Agente de research para consejo farmacéutico que funciona dentro de Claude Code. Consulta fuentes fiables mediante servidores MCP propios (stdio, Python + FastMCP):
 
-- **cima** (`mcp/cima/server.py`): API REST de CIMA (AEMPS). Medicamentos autorizados en España (por nombre, principio activo o CN), fichas técnicas, prospectos, problemas de suministro, notas de seguridad y materiales informativos.
+- **cima** (`mcp/cima/server.py`): API REST de CIMA (AEMPS). Medicamentos autorizados en España (por nombre, principio activo o CN), presentaciones con su CN, fichas técnicas, prospectos, problemas de suministro, notas de seguridad y materiales informativos.
 - **pubmed** (`mcp/pubmed/server.py`): NCBI E-utilities. Búsqueda de artículos y abstracts. Incluye LactMed (`mcp/pubmed/lactmed.py`) desde un índice local en `data/lactmed.json.gz`.
 - **elactancia** (`mcp/elactancia/server.py`): e-lactancia.org (APILAM), compatibilidad con la lactancia en español. Sin API: buscador `/megasearch/` (JSON) + ficha HTML. CC BY-NC-SA 4.0: no comercial, con atribución; solo consultas bajo demanda (1 req/s, caché 24 h), nunca descargas masivas.
 
 Todos se registran en `.mcp.json` y Claude Code los arranca solo.
 
 ## Consultas clínicas
-Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`). Sus reglas:
+Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`) y **devuelve su respuesta tal cual**: sin resumirla, sin reformularla ("el agente dice…") y sin añadir información propia, que no tendría cita. Si quieres comentar algo (p. ej. una mejora del proyecto), sepáralo claramente después de la respuesta. Reglas del agente:
 - Solo información obtenida de las herramientas en la conversación; si no la hay: "No he encontrado evidencia".
 - Cada afirmación clínica con cita y enlace: [CIMA: nombre, sección X] o [PMID: 12345678].
 - Prioridad: ficha técnica CIMA > metaanálisis/revisiones sistemáticas > ensayos > casos clínicos (solo apoyo).

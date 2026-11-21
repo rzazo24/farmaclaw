@@ -325,6 +325,34 @@ def problemas_suministro(nregistro_o_nombre: str) -> dict:
 
 
 @mcp.tool()
+def presentaciones(nregistro_o_cn: str) -> dict:
+    """Presentaciones (envases) de un medicamento con su código nacional (CN).
+
+    Acepta el nº de registro (de buscar_medicamento) o un CN de cualquiera de sus
+    presentaciones. Devuelve por presentación: CN, nombre (incluye el tamaño del
+    envase), si está comercializada y si tiene problemas de suministro.
+    """
+    consulta = nregistro_o_cn.strip()
+    if not consulta.split(".")[0].isdigit():
+        raise ToolError("Indica un nº de registro o un CN. Para buscar por nombre usa antes buscar_medicamento.")
+    encontrados = _buscar(consulta)
+    if not encontrados:
+        raise ToolError(f"No se ha encontrado ningún medicamento con el código {consulta} en CIMA.")
+    med = _medicamento(encontrados[0]["nregistro"])
+    return {
+        "medicamento": med["nombre"],
+        "nregistro": med["nregistro"],
+        "presentaciones": [{
+            "cn": p.get("cn"),
+            "nombre": p.get("nombre"),
+            "comercializada": p.get("comerc"),
+            "problemas_suministro": p.get("psum"),
+        } for p in med.get("presentaciones", [])] or "CIMA no recoge presentaciones para este medicamento.",
+        "fuente": WEB.format(med["nregistro"]),
+    }
+
+
+@mcp.tool()
 def notas_seguridad(nregistro: str) -> dict:
     """Notas informativas de seguridad de la AEMPS sobre un medicamento (más recientes primero).
 

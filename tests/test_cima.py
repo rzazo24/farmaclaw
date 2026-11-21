@@ -89,6 +89,19 @@ def test_problemas_suministro_estructura():
 
 
 @pytest.mark.red
+def test_presentaciones_con_cn():
+    r = s.presentaciones("51347")  # Aspirina C
+    cns = [p["cn"] for p in r["presentaciones"]]
+    assert "712729" in cns
+    assert s.presentaciones("712729.8")["nregistro"] == "51347"  # también por CN
+
+
+def test_presentaciones_rechaza_nombres():
+    with pytest.raises(ToolError, match="buscar_medicamento"):
+        s.presentaciones("aspirina")
+
+
+@pytest.mark.red
 def test_notas_seguridad_valproico():
     r = s.notas_seguridad("84517")
     assert r["total"] >= 1
