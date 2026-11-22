@@ -287,3 +287,137 @@ def test_api_frena_los_fallos_pero_no_los_aciertos(cliente, guardia, reloj, monk
     esperas.clear()
     r = cliente.post("/api/entrar", json={"contrasena": CONTRASENA, "codigo": codigo(reloj)}, headers=H)
     assert r.status_code == 200 and not esperas
+
+
+# ── Límite de cálculos de contraseña a la vez (scrypt) ──
+
+import asyncio  # noqa: E402
+import threading  # noqa: E402
+import time as _time  # noqa: E402
+
+import httpx  # noqa: E402
+
+
+class ContrasenaLenta:
+    """Sustituye a contrasena_valida: tarda y cuenta cuántas comprobaciones hay a la vez."""
+
+    def __init__(self, segundos=0.2):
+        self.segundos, self.en_curso, self.maximo, self.llamadas = segundos, 0, 0, 0
+        self._cerrojo = threading.Lock()
+
+    def __call__(self, contrasena, guardado):
+        with self._cerrojo:
+            self.en_curso += 1
+            self.llamadas += 1
+            self.maximo = max(self.maximo, self.en_curso)
+        _time.sleep(self.segundos)
+        with self._cerrojo:
+            self.en_curso -= 1
+        return contrasena == CONTRASENA
+
+
+def _login(cliente, ip, contrasena="mala", cod="123456"):
+    return cliente.post("/api/entrar", json={"contrasena": contrasena, "codigo": cod},
+                        headers={**H, "X-Forwarded-For": ip})
+
+
+def _async_cliente(app):
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://testserver")
+
+
+def test_nunca_mas_de_dos_calculos_a_la_vez(guardia, monkeypatch):
+    lenta = ContrasenaLenta()
+    monkeypatch.setattr(seguridad, "contrasena_valida", lenta)
+    app = web.crear_app(guardia, ConsultasFalsas(), web.LimiteCalculo(simultaneos=2, espera_max=10, max_cola=20))
+
+    async def todo():
+        async with _async_cliente(app) as c:
+            return await asyncio.gather(*(_login(c, f"198.51.100.{i}") for i in range(10)))
+
+    respuestas = asyncio.run(todo())
+    assert [r.status_code for r in respuestas] == [401] * 10    # todas se atienden, por turnos
+    assert lenta.llamadas == 10 and lenta.maximo == 2
+
+
+def test_espera_agotada_da_503_sin_anotar_fallos(guardia, monkeypatch):
+    lenta = ContrasenaLenta()
+    monkeypatch.setattr(seguridad, "contrasena_valida", lenta)
+    limite = web.LimiteCalculo(simultaneos=1, espera_max=0.1, max_cola=20)
+    app = web.crear_app(guardia, ConsultasFalsas(), limite)
+
+    async def todo():
+        await limite.semaforo.acquire()                          # alguien ocupa el único turno
+        async with _async_cliente(app) as c:
+            r = await _login(c, "203.0.113.7")
+        limite.liberar()
+        return r
+
+    r = asyncio.run(todo())
+    assert r.status_code == 503 and "ocupado" in r.json()["detail"]
+    assert lenta.llamadas == 0                                   # no se ha calculado nada
+    assert guardia.por_ip == {} and len(guardia.fallos_globales) == 0
+
+
+def test_cola_llena_da_503_inmediato(guardia, monkeypatch):
+    monkeypatch.setattr(seguridad, "contrasena_valida", ContrasenaLenta())
+    limite = web.LimiteCalculo(simultaneos=1, espera_max=5, max_cola=1)
+    app = web.crear_app(guardia, ConsultasFalsas(), limite)
+
+    async def todo():
+        await limite.semaforo.acquire()
+        async with _async_cliente(app) as c:
+            en_cola = asyncio.create_task(_login(c, "203.0.113.1"))  # ocupa el único hueco de la cola
+            while limite.esperando < 1:
+                await asyncio.sleep(0.01)
+            inicio = _time.monotonic()
+            r = await _login(c, "203.0.113.2")
+            tardanza = _time.monotonic() - inicio
+            limite.liberar()
+            await en_cola
+        return r, tardanza
+
+    r, tardanza = asyncio.run(todo())
+    assert r.status_code == 503 and tardanza < 1                 # sin esperar los 5 s
+    assert "203.0.113.2" not in guardia.por_ip
+
+
+def test_ip_bloqueada_da_429_sin_pasar_por_el_semaforo(guardia, reloj, monkeypatch):
+    lenta = ContrasenaLenta()
+    monkeypatch.setattr(seguridad, "contrasena_valida", lenta)
+    limite = web.LimiteCalculo(simultaneos=1, espera_max=5, max_cola=0)
+    app = web.crear_app(guardia, ConsultasFalsas(), limite)
+    guardia.por_ip["203.0.113.9"] = {"fallos": 0, "hasta": reloj() + seguridad.BLOQUEO_S, "ultimo": reloj()}
+
+    async def todo():
+        await limite.semaforo.acquire()                          # semáforo ocupado y cola a cero
+        async with _async_cliente(app) as c:
+            r = await _login(c, "203.0.113.9")
+        limite.liberar()
+        return r
+
+    r = asyncio.run(todo())
+    assert r.status_code == 429 and lenta.llamadas == 0
+
+
+def test_login_correcto_con_el_limite(guardia, reloj, monkeypatch):
+    monkeypatch.setattr(seguridad, "contrasena_valida", ContrasenaLenta(0.05))
+    app = web.crear_app(guardia, ConsultasFalsas(), web.LimiteCalculo())
+
+    async def todo():
+        async with _async_cliente(app) as c:
+            r = await _login(c, "198.51.100.20", CONTRASENA, codigo(reloj))
+            return r, await c.get("/api/sesion")
+
+    r, sesion = asyncio.run(todo())
+    assert r.status_code == 200 and sesion.json() == {"activa": True}
+
+
+def test_aviso_de_ocupado_como_mucho_una_vez_por_minuto(caplog):
+    t = [0.0]
+    limite = web.LimiteCalculo(reloj=lambda: t[0])
+    with caplog.at_level("WARNING", logger="farmaclaw-web"):
+        for _ in range(5):
+            limite.avisar_ocupado("cola llena")
+        t[0] += 61
+        limite.avisar_ocupado("cola llena")
+    assert caplog.text.count("servidor ocupado") == 2

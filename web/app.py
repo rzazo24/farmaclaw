@@ -6,6 +6,7 @@ la sesión de Claude Code de la VM y gasta de la ventana de la suscripción.
 Seguridad (ver web/seguridad.py):
 - Escucha solo en 127.0.0.1; a internet sale por Tailscale Funnel (HTTPS).
 - Contraseña + código TOTP del móvil, bloqueo por IP tras 5 fallos, freno global, sesión que caduca.
+- Como mucho 2 comprobaciones de contraseña (scrypt) a la vez: muchos intentos simultáneos no saturan la VM.
 - Claude solo puede usar el agente y las herramientas MCP (que solo leen CIMA,
   PubMed y e-lactancia): ni terminal ni archivos, aunque alguien lograra entrar.
 
@@ -186,9 +187,52 @@ class Consultas:
         return None
 
 
-def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None) -> FastAPI:
+class LimiteCalculo:
+    """Cuántas comprobaciones de contraseña (scrypt: ~32 MB y CPU a propósito) se hacen a la vez.
+
+    Sin límite, muchos intentos simultáneos calcularían scrypt en paralelo en los hilos del pool
+    (~1 GB de RAM y CPU al 100 % en la VM de Claude Code). Con él, como mucho `simultaneos` a la vez;
+    el resto espera turno hasta `espera_max` s, y si ya esperan más de `max_cola`, se rechaza enseguida."""
+
+    def __init__(self, simultaneos: int = 2, espera_max: float = 10.0, max_cola: int = 20, reloj=time.monotonic):
+        self.semaforo = asyncio.Semaphore(simultaneos)
+        self.espera_max = espera_max
+        self.max_cola = max_cola
+        self.esperando = 0
+        self.reloj = reloj
+        self._ultimo_aviso = float("-inf")
+
+    def avisar_ocupado(self, motivo: str) -> None:
+        """Log de aviso como mucho una vez por minuto (sin IP ni credenciales), para no llenar el journal."""
+        ahora = self.reloj()
+        if ahora - self._ultimo_aviso >= 60:
+            self._ultimo_aviso = ahora
+            log.warning("Login rechazado por servidor ocupado (%s); %d peticiones esperando", motivo, self.esperando)
+
+    async def turno(self) -> bool:
+        """Espera turno para calcular. True si lo consigue (hay que llamar a liberar()), False si no."""
+        if self.semaforo.locked() and self.esperando >= self.max_cola:
+            self.avisar_ocupado("cola llena")
+            return False
+        self.esperando += 1
+        try:
+            await asyncio.wait_for(self.semaforo.acquire(), self.espera_max)
+            return True
+        except TimeoutError:
+            self.avisar_ocupado("espera agotada")
+            return False
+        finally:
+            self.esperando -= 1
+
+    def liberar(self) -> None:
+        self.semaforo.release()
+
+
+def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None,
+              limite: LimiteCalculo | None = None) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     consultas = consultas or Consultas()
+    limite = limite or LimiteCalculo()
     app.mount("/estatico", StaticFiles(directory=ESTATICO), name="estatico")
 
     @app.middleware("http")
@@ -222,8 +266,14 @@ def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None) ->
         if espera := guardia.bloqueado(ip):
             log.warning("Intento desde %s, que está bloqueada", ip)
             raise HTTPException(429, f"Demasiados intentos. Prueba dentro de {espera // 60 + 1} min.")
-        token = await asyncio.to_thread(guardia.entrar, str(datos.get("contrasena", "")),
-                                        str(datos.get("codigo", "")), ip)
+        # Turno para calcular scrypt: si el servidor está saturado, 503 sin contarlo como fallo.
+        if not await limite.turno():
+            raise HTTPException(503, "Servidor ocupado, inténtalo en unos segundos.")
+        try:
+            token = await asyncio.to_thread(guardia.entrar, str(datos.get("contrasena", "")),
+                                            str(datos.get("codigo", "")), ip)
+        finally:
+            limite.liberar()
         if not token:
             if retraso := guardia.retraso():  # freno global: muchos fallos en total → respuesta más lenta
                 await asyncio.sleep(retraso)
