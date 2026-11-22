@@ -7,8 +7,6 @@ los títulos habituales (Methods, Results…) y las tablas no se recuperan de fo
 import io
 import re
 
-from pypdf import PdfReader
-
 import pmc
 
 MAX_PAGINAS = 60
@@ -27,6 +25,10 @@ BIBLIOGRAFIA = {"references", "bibliography"}
 
 def texto_pdf(datos: bytes) -> str:
     """Texto plano del PDF (como mucho MAX_PAGINAS páginas), con los guiones de fin de línea unidos."""
+    # pypdf se importa aquí y no al principio: tarda ~0,6 s y solo hace falta si llega un PDF.
+    # En una VM de 1 CPU, cada segundo cuenta al arrancar los 4 servidores MCP a la vez.
+    from pypdf import PdfReader
+
     lector = PdfReader(io.BytesIO(datos))
     paginas = [p.extract_text() or "" for p in lector.pages[:MAX_PAGINAS]]
     texto = "\n".join(paginas)

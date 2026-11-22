@@ -268,3 +268,17 @@ def test_texto_completo_no_disponible_real():
         pubmed.texto_completo("7202185")          # artículo de 1981, sin PMC
     with pytest.raises(ToolError, match="la editorial no permite descargar el texto"):
         pubmed.texto_completo("38275741")         # Cochrane: en PMC, pero sin XML completo
+
+
+def test_el_servidor_de_pubmed_no_carga_pypdf_al_arrancar():
+    """pypdf tarda ~0,6 s en importarse: solo se carga cuando llega un PDF."""
+    import subprocess
+    import sys
+    from pathlib import Path
+    raiz = Path(__file__).resolve().parent.parent
+    codigo = ("import sys, importlib.util; sys.path.insert(0, 'mcp/pubmed'); "
+              "spec = importlib.util.spec_from_file_location('s', 'mcp/pubmed/server.py'); "
+              "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+              "print('pypdf' in sys.modules)")
+    salida = subprocess.run([sys.executable, "-c", codigo], cwd=raiz, capture_output=True, text=True)
+    assert salida.stdout.strip() == "False", salida.stderr[-500:]
