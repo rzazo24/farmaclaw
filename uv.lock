@@ -251,6 +251,7 @@ dependencies = [
     { name = "markdown-it-py" },
     { name = "mcp" },
     { name = "pyotp" },
+    { name = "pypdf" },
     { name = "segno" },
     { name = "uvicorn" },
 ]
@@ -269,6 +270,7 @@ requires-dist = [
     { name = "markdown-it-py", specifier = ">=4.3.0" },
     { name = "mcp", specifier = ">=1.2,<2" },
     { name = "pyotp", specifier = ">=2.12.1" },
+    { name = "pypdf", specifier = ">=7.1.1" },
     { name = "segno", specifier = ">=1.6.6" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
@@ -670,6 +672,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/70/d7/fe43d6cfd1e80081a374c612df6b6555205a7ab761fdd6ba6e30435fd963/pyotp-2.12.1.tar.gz", hash = "sha256:8d0c4192f3c5d1b1a8792df23b9d8acbb7e70abd2b160962af55c5700edbd236", size = 27480, upload-time = "2026-11-19T05:06:24.189Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/d5/ca399f55b474357c42b8d0ee1c0222a22e6f88bbf4588130b75737c3b73b/pyotp-2.12.1-py3-none-any.whl", hash = "sha256:2f65978d0a0afe5588ec960c810cbb974ba1957ffbf29775d8d4e1b2d4b8984c", size = 17026, upload-time = "2026-11-19T05:06:22.922Z" },
+]
+
+[[package]]
+name = "pypdf"
+version = "7.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/5f/f41984a8150ec37c6ee50fa6fa1868d065337b65ba510a155848b2ce0b62/pypdf-7.1.1.tar.gz", hash = "sha256:2eff4e2fc5fb22a6d6711e6f1166cdc9ab5765d90cd0d77dfea3f4aa91a27b1d", size = 7221452, upload-time = "2026-11-18T11:51:08.608Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/ef/11ed995bd10a1632f7fea3da38ae8d42bc3ccc5b9969fe04d8620c844408/pypdf-7.1.1-py3-none-any.whl", hash = "sha256:04c5680d4b4cfa04ab505b09393fc949860c34a4dad6565284d11a2f5c3ce8b1", size = 421026, upload-time = "2026-11-18T11:51:06.563Z" },
 ]
 
 [[package]]

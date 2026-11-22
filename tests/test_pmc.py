@@ -1,9 +1,10 @@
-"""Texto completo de PubMed Central: procesado del XML (sin red) y casos reales (red)."""
+"""Texto completo (PMC, Europe PMC, Unpaywall): procesado del XML y del PDF (sin red) y casos reales (red)."""
 
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
 from conftest import pubmed
+import pdf
 import pmc
 
 # Artículo JATS mínimo de ejemplo (inventado, con la estructura real de PMC).
@@ -100,10 +101,53 @@ def test_identificador_invalido_falla_sin_llamar_a_la_api():
         pubmed.texto_completo("clopidogrel")
 
 
+def test_identificadores_admitidos():
+    assert pubmed._identificar("41177553") == {"pmid": "41177553"}
+    assert pubmed._identificar("pmc12581046") == {"pmcid": "PMC12581046"}
+    assert pubmed._identificar("https://doi.org/10.1136/bmjophth-2025-002509") == {"doi": "10.1136/bmjophth-2025-002509"}
+
+
+def test_no_descarga_de_la_red_local():
+    assert not pubmed._url_publica("http://127.0.0.1:8787/")
+    assert not pubmed._url_publica("http://localhost/x.pdf")
+    assert not pubmed._url_publica("file:///etc/passwd")
+
+
+TEXTO_PDF = """Fármaco X frente a placebo
+Revista de Prueba 2024
+Abstract
+Resumen breve.
+1. Introduction
+El fármaco X se usa en la
+enfermedad Y.
+2. Methods
+Ensayo aleatorizado con 100 pa-
+cientes.
+Results
+La respuesta fue del 40 %.
+References
+1. Referencia que no debe salir.
+Conflict of interest
+Los autores declaran honorarios de Laboratorio Y."""
+
+
+def test_pdf_divide_por_titulos_sin_bibliografia():
+    secs = pdf.secciones(TEXTO_PDF.replace("pa-\ncientes", "pacientes"))
+    titulos = [t for t, _ in secs]
+    assert titulos == ["Inicio", "Abstract", "Introduction", "Methods", "Results", "Conflict of interest"]
+    assert "El fármaco X se usa en la enfermedad Y." in dict(secs)["Introduction"]
+    assert "Referencia que no debe salir" not in "\n".join(x for _, x in secs)
+
+
+def test_pdf_rechaza_lo_que_no_es_pdf():
+    with pytest.raises(ValueError, match="no es un PDF"):
+        pdf.parsear(b"<!DOCTYPE html><html>Acceso denegado</html>")
+
+
 @pytest.mark.red
 def test_texto_completo_real():
     indice = pubmed.texto_completo("41177553")   # metaanálisis de biosimilares de aflibercept (BMJ Open Ophthalmol)
-    assert indice["pmcid"] == "PMC12581046"
+    assert indice["pmcid"] == "PMC12581046" and indice["origen"] == "PubMed Central"
     assert "Methods" in [s["titulo"] for s in indice["secciones"]]
     assert indice["tablas"] and indice["hay_declaraciones"]
     assert indice["fuente"].endswith("PMC12581046/")
@@ -112,8 +156,13 @@ def test_texto_completo_real():
 
 
 @pytest.mark.red
+def test_texto_completo_por_doi_va_a_pmc():
+    assert pubmed.texto_completo("10.1136/bmjophth-2025-002509")["cita"] == "PMC12581046"
+
+
+@pytest.mark.red
 def test_texto_completo_no_disponible_real():
-    with pytest.raises(ToolError, match="no está en PubMed Central"):
+    with pytest.raises(ToolError, match="PubMed Central: el artículo no está"):
         pubmed.texto_completo("7202185")          # artículo de 1981, sin PMC
-    with pytest.raises(ToolError, match="editorial no permite"):
+    with pytest.raises(ToolError, match="la editorial no permite descargar el texto"):
         pubmed.texto_completo("38275741")         # Cochrane: en PMC, pero sin XML completo

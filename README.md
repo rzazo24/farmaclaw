@@ -47,6 +47,11 @@ export NCBI_API_KEY=tu_clave
 export NCBI_EMAIL=tu@correo
 ```
 
+Opcional, correo para **Unpaywall** (lo exige en cada consulta; sin él, `texto_completo` no busca copias abiertas en PDF):
+```bash
+export UNPAYWALL_EMAIL=tu@correo
+```
+
 ### Primer arranque: aprobar los servidores MCP
 ```bash
 cd ~/farmaclaw && claude
@@ -108,10 +113,10 @@ Las secciones de más de 8.000 caracteres se devuelven **por partes** (`parte=1,
 |---|---|---|
 | `buscar_articulos` | Búsqueda en PubMed por relevancia | Filtros opcionales: tipo (`Meta-Analysis`, `Systematic Review`, `Randomized Controlled Trial`, `Review`, `Case Reports`) y año mínimo. Devuelve la consulta exacta usada, para repetirla en la web |
 | `obtener_resumen` | Abstract y metadatos (hasta 10 PMIDs) | Autores abreviados, revista, año, abstract por apartados, MeSH, DOI y enlace al texto completo en PMC si existe |
-| `texto_completo` | Texto completo de artículos de acceso libre en PubMed Central (PMC) | Por PMID o PMCID. Primero un índice (secciones, tablas, licencia); luego cada sección (`Methods`, `resultados`, número…), `tablas` o `declaraciones` (financiación y conflictos de interés), por partes. Sin bibliografía. Si el artículo no está en PMC o la editorial no permite descargarlo, lo dice y remite al abstract |
+| `texto_completo` | Texto completo de copias legales de acceso abierto | Por PMID, PMCID o DOI. Busca en orden en **PubMed Central**, **Europe PMC** (incluye preprints) y **Unpaywall** (PDF abiertos de la editorial o de repositorios). Primero un índice (origen y versión, secciones, tablas, licencia); luego cada sección (`Methods`, `resultados`, número…), `tablas` o `declaraciones` (financiación y conflictos de interés), por partes. Sin bibliografía. De los PDF no se extraen tablas y las secciones se detectan de forma aproximada. Si no hay copia abierta, dice dónde ha buscado y remite al abstract |
 | `lactmed` | LactMed: fármacos y lactancia | Nombre en **inglés** (acepta equivalencias habituales: paracetamol → acetaminophen, salbutamol → albuterol, metamizol → dipyrone…). Secciones: `resumen` (con alternativas y clase), `niveles`, `efectos_lactante`, `efectos_lactancia`, `alternativas`. Las citas aparecen como `[PMID: …]` |
 
-El agente usa `texto_completo` solo cuando el abstract no basta (tablas, métodos, subgrupos, conflictos de interés) y para pocos artículos clave; los datos que salen de ahí se citan como `[PMC…, sección X]`.
+El agente usa `texto_completo` solo cuando el abstract no basta (tablas, métodos, subgrupos, conflictos de interés) y para pocos artículos clave; los datos que salen de ahí se citan con su origen (`[PMC…, sección X]`, `[Europe PMC …]`, `[Texto completo vía Unpaywall …]`) y, si es un preprint o un manuscrito aceptado, lo dice.
 
 LactMed se consulta desde un **índice local** (`data/lactmed.json.gz`, ~1,4 MB, no se sube a git): su web bloquea los accesos automáticos, así que se usa la descarga oficial completa del FTP del NCBI.
 
