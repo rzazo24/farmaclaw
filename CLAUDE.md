@@ -3,7 +3,7 @@
 Agente de research para consejo farmacéutico que funciona dentro de Claude Code. Consulta fuentes fiables mediante servidores MCP propios (stdio, Python + FastMCP):
 
 - **cima** (`mcp/cima/server.py`): API REST de CIMA (AEMPS). Medicamentos autorizados en España (por nombre, principio activo o CN), presentaciones con su CN, fichas técnicas, prospectos, problemas de suministro, notas de seguridad y materiales informativos.
-- **pubmed** (`mcp/pubmed/server.py`): NCBI E-utilities. Búsqueda de artículos y abstracts. Incluye LactMed (`mcp/pubmed/lactmed.py`) desde un índice local en `data/lactmed.json.gz`.
+- **pubmed** (`mcp/pubmed/server.py`): NCBI E-utilities. Búsqueda de artículos, abstracts y texto completo de PMC (`mcp/pubmed/pmc.py`). Incluye LactMed (`mcp/pubmed/lactmed.py`) desde un índice local en `data/lactmed.json.gz`.
 - **elactancia** (`mcp/elactancia/server.py`): e-lactancia.org (APILAM), compatibilidad con la lactancia en español. Sin API: buscador `/megasearch/` (JSON) + ficha HTML. CC BY-NC-SA 4.0: no comercial, con atribución; solo consultas bajo demanda (1 req/s, caché 24 h), nunca descargas masivas.
 
 Todos se registran en `.mcp.json` y Claude Code los arranca solo.
@@ -32,6 +32,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol"). Por nombre no salen las marcas (Depakine): se busca siempre por nombre Y por principio activo (`practiv1`, que entiende "valproato" = "valproico").
 - CIMA: las fechas son medianoche de Madrid en ms; convertir con `Europe/Madrid`, no UTC (saldría el día anterior).
 - PubMed: artículos recientes pueden no tener MeSH todavía.
+- PMC (texto completo): PMID → PMC con `elink` (`linkname=pubmed_pmc`); el conversor `idconv` se ha movido a pmc.ncbi.nlm.nih.gov y no encuentra muchos artículos. `efetch db=pmc` da JATS XML; algunas editoriales (p. ej. Cochrane) no permiten el XML completo: viene sin `<body>` y con un comentario "does not allow downloading of the full text".
 - LactMed: la web tiene reCAPTCHA y `efetch` no da el texto de Bookshelf; se usa el tar.gz oficial de `ftp.ncbi.nlm.nih.gov/pub/litarch/` (NBK501922). Títulos en inglés USAN (acetaminophen, albuterol, dipyrone): ver `SINONIMOS`.
 
 ## Cómo probar

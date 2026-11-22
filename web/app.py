@@ -84,6 +84,9 @@ def describir_paso(nombre: str, entrada: dict) -> str | None:
     if not nombre.startswith("mcp__"):
         return None
     _, servidor, herramienta = nombre.split("__", 2)
+    if herramienta == "texto_completo":
+        detalle = f"{entrada.get('articulo', '')} · {entrada.get('seccion', 'indice')}"
+        return f"PubMed Central · texto_completo ({detalle})"
     detalle = entrada.get("seccion") or entrada.get("farmaco") or entrada.get("producto") \
         or entrada.get("nombre_o_principio_activo") or entrada.get("consulta") or ""
     detalle = str(detalle)[:60]

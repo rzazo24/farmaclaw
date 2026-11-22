@@ -1,6 +1,7 @@
 """Servidor MCP de PubMed (NCBI E-utilities).
 
-Usa esearch (buscar PMIDs), esummary (metadatos breves) y efetch (abstract, MeSH).
+Usa esearch (buscar PMIDs), esummary (metadatos breves), efetch (abstract, MeSH) y, para el
+texto completo de PubMed Central, elink (PMID → PMC) y efetch con db=pmc.
 Variables de entorno opcionales: NCBI_API_KEY y NCBI_EMAIL.
 Transporte stdio: stdout es el canal MCP, así que los logs van a stderr.
 """
@@ -17,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 
 import lactmed as lactmed_idx  # mismo directorio: Python añade la carpeta del script a sys.path
+import pmc as pmc_xml
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s pubmed %(levelname)s %(message)s")
 log = logging.getLogger("pubmed")
@@ -230,7 +232,7 @@ SECCIONES_LACTMED = {
     "efectos_lactancia": "Efectos sobre la producción de leche",
     "alternativas": "Fármacos alternativos a considerar",
 }
-MAX_LACTMED = 8000  # caracteres por parte; las secciones de detalle pueden pasar de 10.000
+MAX_LACTMED = 8000  # caracteres por parte (LactMed y texto completo de PMC); las secciones pueden pasar de 10.000
 
 
 def _partir(texto: str) -> list[str]:
@@ -301,6 +303,79 @@ def lactmed(farmaco: str, seccion: str = "resumen", parte: int = 1) -> dict:
         "indice_local_generado": lactmed_idx.cargar()["generado"],
         "fuente": FUENTE_LACTMED.format(f["id"]),
     }
+
+
+def _pmc_id(articulo: str) -> str:
+    """Número de PMC a partir de un PMCID («PMC12581046») o de un PMID."""
+    a = articulo.strip().upper().replace(" ", "")
+    if a.startswith("PMC") and a[3:].isdigit():
+        return a[3:]
+    if not a.isdigit():
+        raise ToolError("Indica un PMID (solo dígitos) o un PMCID (p. ej. PMC12581046).")
+    data = _get("elink", {"dbfrom": "pubmed", "db": "pmc", "linkname": "pubmed_pmc", "id": a, "retmode": "json"})
+    enlaces = (data.get("linksets") or [{}])[0].get("linksetdbs") or []
+    ids = enlaces[0].get("links", []) if enlaces else []
+    if not ids:
+        raise ToolError(f"El artículo PMID {a} no está en PubMed Central: solo está disponible su abstract "
+                        "(usa obtener_resumen).")
+    return str(ids[0])
+
+
+@mcp.tool()
+def texto_completo(articulo: str, seccion: str = "indice", parte: int = 1) -> dict:
+    """Lee el TEXTO COMPLETO de un artículo de acceso libre en PubMed Central (PMC).
+
+    Úsalo solo cuando el abstract no basta (tablas, métodos, subgrupos, dosis,
+    conflictos de interés) y para pocos artículos clave: los textos son largos.
+    articulo: PMID (p. ej. "41177553") o PMCID ("PMC12581046").
+    seccion: "indice" (por defecto: título, licencia y lista de secciones y tablas),
+      número o nombre de sección ("2", "Methods", "resultados"), "tablas"
+      o "declaraciones" (financiación y conflictos de interés).
+    parte: las secciones largas se devuelven por partes; si total_partes > 1, pide parte=2, 3...
+    Si el artículo no está en PMC o la editorial no permite descargar el texto, lo indica.
+    """
+    numero = _pmc_id(articulo)
+    xml = _get("efetch", {"db": "pmc", "id": numero, "retmode": "xml"}, json_=False)
+    try:
+        d = pmc_xml.parsear(xml)
+    except ValueError as e:
+        raise ToolError(f"PMC ha devuelto una respuesta no válida: {e}")
+    pmcid = d["pmcid"] or f"PMC{numero}"
+    fuente = PMC.format(pmcid)
+    if d["bloqueado"]:
+        raise ToolError(f"La editorial no permite descargar el texto completo de {pmcid} desde la API. "
+                        f"Puede leerse en la web: {fuente}. Usa obtener_resumen para el abstract.")
+    base = {"titulo": d["titulo"], "revista": d["revista"], "anio": d["anio"], "pmid": d["pmid"], "pmcid": pmcid,
+            "licencia": d["licencia"], "licencia_url": d["licencia_url"], "fuente": fuente}
+
+    pedida = seccion.strip().lower()
+    if pedida in ("indice", "índice", ""):
+        return base | {
+            "secciones": [{"n": i, "titulo": t, "caracteres": len(x)} for i, (t, x) in enumerate(d["secciones"], 1)],
+            "tablas": [t for t, _ in d["tablas"]],
+            "hay_declaraciones": bool(d["declaraciones"]),
+            "siguiente_paso": "Pide una sección por número o nombre, 'tablas' o 'declaraciones'.",
+        }
+    if pedida == "tablas":
+        if not d["tablas"]:
+            raise ToolError(f"{pmcid} no tiene tablas en el texto.")
+        nombre, texto = "tablas", "\n\n".join(x for _, x in d["tablas"])
+    elif pedida == "declaraciones":
+        if not d["declaraciones"]:
+            raise ToolError(f"{pmcid} no incluye declaraciones de financiación ni de conflictos de interés en el XML.")
+        nombre, texto = "declaraciones", d["declaraciones"]
+    else:
+        elegida = pmc_xml.elegir_seccion(d["secciones"], seccion)
+        if not elegida:
+            disponibles = ", ".join(f"{i}. {t}" for i, (t, _) in enumerate(d["secciones"], 1))
+            raise ToolError(f"No encuentro la sección «{seccion}». Disponibles: {disponibles}; o 'tablas', 'declaraciones'.")
+        nombre, texto = elegida
+
+    partes = _partir(texto)
+    if not 1 <= parte <= len(partes):
+        raise ToolError(f"La sección «{nombre}» tiene {len(partes)} parte(s); has pedido la parte {parte}.")
+    aviso = f"\n[… continúa: pide parte={parte + 1} de {len(partes)}]" if parte < len(partes) else ""
+    return base | {"seccion": nombre, "parte": parte, "total_partes": len(partes), "texto": partes[parte - 1] + aviso}
 
 
 if __name__ == "__main__":
