@@ -1,7 +1,7 @@
 """Carga de los servidores MCP para las pruebas.
 
-Los tres servidores se llaman server.py, así que se cargan por ruta con nombres
-distintos (cima_server, pubmed_server, elactancia_server).
+Los servidores se llaman server.py, así que se cargan por ruta con nombres
+distintos (cima_server, pubmed_server, elactancia_server, calculos_server).
 """
 
 import importlib.util
@@ -27,6 +27,7 @@ def _cargar(nombre: str, ruta: Path):
 cima = _cargar("cima_server", RAIZ / "mcp" / "cima" / "server.py")
 pubmed = _cargar("pubmed_server", RAIZ / "mcp" / "pubmed" / "server.py")
 elactancia = _cargar("elactancia_server", RAIZ / "mcp" / "elactancia" / "server.py")
+calculos = _cargar("calculos_server", RAIZ / "mcp" / "calculos" / "server.py")
 import lactmed  # noqa: E402
 
 

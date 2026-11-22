@@ -48,11 +48,11 @@ CLAUDE = [
     "--output-format", "stream-json", "--verbose",
     "--permission-mode", "dontAsk",
     "--tools", "Agent",
-    "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*",
+    "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*", "mcp__calculos__*",
     "--no-session-persistence",
 ]
 
-NOMBRES = {"cima": "CIMA", "pubmed": "PubMed", "elactancia": "e-lactancia"}
+NOMBRES = {"cima": "CIMA", "pubmed": "PubMed", "elactancia": "e-lactancia", "calculos": "Cálculo"}
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("farmaclaw-web")
@@ -110,6 +110,8 @@ def describir_paso(nombre: str, entrada: dict) -> str | None:
     if not nombre.startswith("mcp__"):
         return None
     _, servidor, herramienta = nombre.split("__", 2)
+    if herramienta == "dosis_pediatrica":
+        return f"Cálculo · dosis_pediatrica ({entrada.get('peso_kg', '?')} kg × {entrada.get('dosis_mg_kg', '?')} mg/kg)"
     if herramienta == "texto_completo":
         detalle = f"{entrada.get('articulo', '')} · {entrada.get('seccion', 'indice')}"
         return f"Texto completo ({detalle})"

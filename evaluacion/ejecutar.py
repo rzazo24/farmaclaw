@@ -41,7 +41,7 @@ COMANDO = [
     "claude", "-p",
     "--output-format", "stream-json", "--verbose",
     "--permission-mode", "dontAsk",
-    "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*",
+    "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*", "mcp__calculos__*",
     "--no-session-persistence",
 ]
 

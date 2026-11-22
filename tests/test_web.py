@@ -177,7 +177,7 @@ def test_claude_solo_puede_usar_el_agente_y_las_herramientas_mcp():
     assert cmd[cmd.index("--permission-mode") + 1] == "dontAsk"
     assert "--strict-mcp-config" in cmd and cmd[cmd.index("--mcp-config") + 1].endswith(".mcp.json")
     permitidas = cmd[cmd.index("--allowedTools") + 1: cmd.index("--no-session-persistence")]
-    assert set(permitidas) == {"Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*"}
+    assert set(permitidas) == {"Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*", "mcp__calculos__*"}
 
 
 def test_html_de_la_respuesta_escapa_html_crudo_y_abre_enlaces_aparte():

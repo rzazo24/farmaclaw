@@ -22,6 +22,7 @@ flowchart LR
     A --> M2["MCP pubmed"] --> NCBI[("PubMed · NCBI")]
     M2 --> LM[("LactMed<br/>índice local")]
     A --> M3["MCP elactancia"] --> EL[("e-lactancia.org")]
+    A --> M4["MCP calculos<br/>sin red ni IA"]
 ```
 
 1. Haces una pregunta, directamente o con un comando rápido.
@@ -81,7 +82,7 @@ Desde el iPhone: activa `/remote-control` en la sesión (o usa el [arranque auto
 
 ## El agente `research`
 
-Definido en `.claude/agents/research.md`. Solo tiene acceso a las herramientas de los tres servidores MCP (ni web ni archivos), y sigue estas reglas:
+Definido en `.claude/agents/research.md`. Solo tiene acceso a las herramientas de los servidores MCP del proyecto (ni web ni archivos), y sigue estas reglas:
 
 - **Solo lo que ha leído.** Responde únicamente con información obtenida de las herramientas en esa conversación. Si no la encuentra, dice *"No he encontrado evidencia"* y explica qué buscó. Si una API falla, lo dice en vez de suponer.
 - **Una cita por afirmación clínica**, con enlace: `[CIMA: nombre, sección X]`, `[PMID: 12345678]`, `[LactMed: fármaco]`, `[e-lactancia: producto]`. No cita un artículo sin haber leído su resumen.
@@ -126,6 +127,16 @@ LactMed se consulta desde un **índice local** (`data/lactmed.json.gz`, ~1,4 MB,
 | `elactancia` | Compatibilidad con la lactancia | Principio activo en **español** (para marcas, buscar antes el principio activo en CIMA). Nivel de riesgo de 0 (compatible) a 3 (incompatible), comentario con referencias, alternativas más seguras si las hay y fecha de actualización |
 
 e-lactancia no tiene API pública: se usa su buscador interno y se lee la ficha, solo cuando se pregunta (1 petición/s, caché 24 h), nunca con descargas masivas.
+
+### `calculos`: calculadora (sin red ni IA)
+Aritmética determinista en Python (con `Decimal`, para que 15 × 7,5 dé exactamente 112,5), para que el agente no haga cuentas de cabeza. Solo calcula: los datos de partida tienen que salir de la ficha técnica.
+
+| Herramienta | Qué hace | Detalles |
+|---|---|---|
+| `dosis_pediatrica` | Dosis por peso | Peso (0,5-150 kg) y la dosis tal como la da la ficha: mg/kg **por toma** (`dosis_mg_kg`) o mg/kg **por día** (`dosis_mg_kg_dia`, que se reparte entre `tomas_al_dia`), y opcionales: concentración (mg/mL), tomas al día y máximos por toma y por día de la ficha. Devuelve mg y mL por toma (exacto y redondeado a 0,1 mL), mg/día, la operación paso a paso (`15 kg × 7,5 mg/kg = 112,5 mg; 112,5 mg ÷ 20 mg/mL = 5,625 mL → 5,6 mL`) y avisos: máximo superado (con la dosis limitada al máximo y cuál se ha aplicado) o peso > 40 kg (puede aplicar la dosis de adulto). Valores no válidos → error claro, nunca un número |
+| `convertir` | Conversiones simples | mg ↔ mL (con concentración), mcg ↔ mg, % → mg/mL (1 % = 10 mg/mL) y gotas ↔ mL **solo** con las gotas/mL que indique la ficha (nunca supone 20) |
+
+El agente cita los datos de la ficha (`[CIMA: …, sección 4.2]`) y el resultado (`[Cálculo Farmaclaw]`) mostrando la operación. Si la ficha da una tabla por tramos de peso o edad, usa el tramo de la ficha sin recalcular, y si falta el peso lo pide.
 
 ### Comportamiento común
 - Respuestas compactas: nunca documentos enteros, solo lo pedido, y siempre con un campo `fuente` (URL pública).
@@ -172,7 +183,7 @@ Se ejecuta el día 1 de cada mes; si la VM estaba apagada, al arrancar.
 
 - **Diseño:** tipos de consulta en tarjetas, progreso en directo (fuentes que va leyendo), respuesta con enlaces, tema claro/oscuro y ayuda integrada. En el PC, menú lateral con las consultas recientes de la sesión (solo en memoria; se borran al reiniciar) y atajos `Ctrl K` / `Ctrl Enter`; en el móvil, barra inferior.
 - **Acceso:** contraseña (mínimo 14 caracteres, guardada como hash scrypt) + código TOTP de una app de autenticación (2FAS, Google Authenticator…). Tras 5 fallos seguidos **desde una IP**, esa IP se bloquea 15 min (las demás pueden seguir intentándolo, así que un bot no puede dejarte fuera). Si hay muchos fallos en total (más de 50 en 10 min, p. ej. un ataque desde muchas IP), cada intento fallido tarda más en responder (hasta 5 s), pero con la contraseña y el código correctos se entra siempre. La IP real se toma de la cabecera `X-Forwarded-For` que pone Tailscale Funnel, y solo si la conexión viene de 127.0.0.1. Los intentos fallidos se registran con su IP, nunca con la contraseña ni el código. Como mucho se comprueban **2 contraseñas a la vez** (scrypt usa ~32 MB y CPU a propósito): el resto espera turno hasta 10 s, y si el servidor está saturado (más de 20 esperando o espera agotada) responde 503 sin contarlo como fallo, para que muchos intentos simultáneos no saturen la VM. Tras 6 h sin tocar nada (una jornada; aviso 1 min antes, nunca durante una consulta) la página cierra la sesión y borra la pantalla; además, la sesión caduca siempre a las 8 h.
-- **Lo que puede hacer Claude desde la web:** solo delegar en el agente `research` y usar los tres servidores MCP (`--tools Agent`, `--strict-mcp-config`, `dontAsk`). Ni terminal ni archivos ni conectores de claude.ai: aunque alguien entrara, no podría tocar la VM.
+- **Lo que puede hacer Claude desde la web:** solo delegar en el agente `research` y usar los servidores MCP del proyecto (`--tools Agent`, `--strict-mcp-config`, `dontAsk`). Ni terminal ni archivos ni conectores de claude.ai: aunque alguien entrara, no podría tocar la VM.
 - **Publicación:** la web escucha solo en `127.0.0.1:8787` y sale a internet con HTTPS mediante [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (gratis, sin dominio propio ni abrir puertos).
 
 ```bash
@@ -197,7 +208,7 @@ tailscale funnel --https=8443 off        # para dejar de publicarla
 ```bash
 uv run pytest                    # todas: sin red + llamadas reales a las APIs (~10 s)
 uv run pytest -m "not red"       # solo las que no usan red (instantáneas)
-claude mcp list                  # los tres servidores deben salir "✔ Connected"
+claude mcp list                  # los cuatro servidores deben salir "✔ Connected"
 ```
 - **Sin red:** comprueban el procesado de datos (HTML de CIMA, XML de PubMed y LactMed, fichas de e-lactancia, fechas, división por partes) con ejemplos fijos.
 - **Con red** (`@pytest.mark.red`): casos reales contra las APIs (p. ej. que la ficha del clopidogrel mencione el omeprazol en la 4.5). Las de LactMed con datos reales se saltan si no existe el índice local.
@@ -217,6 +228,7 @@ mcp/cima/server.py               MCP de CIMA (AEMPS)
 mcp/pubmed/server.py             MCP de PubMed (+ herramienta LactMed)
 mcp/pubmed/lactmed.py            descarga y búsqueda del índice local de LactMed
 mcp/elactancia/server.py         MCP de e-lactancia
+mcp/calculos/server.py           MCP de cálculos (dosis pediátricas, conversiones)
 tests/                           pruebas pytest (sin red y con APIs reales)
 evaluacion/                      evaluación del agente: casos reales, informe y revisión manual
 web/                             web privada de consultas (FastAPI + contraseña y TOTP)

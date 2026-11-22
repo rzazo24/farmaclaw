@@ -34,6 +34,16 @@
         "python",
         "mcp/elactancia/server.py"
       ]
+    },
+    "calculos": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        ".",
+        "python",
+        "mcp/calculos/server.py"
+      ]
     }
   }
 }
