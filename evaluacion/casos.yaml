@@ -450,10 +450,7 @@ casos:
       - {herramienta: ficha_tecnica_seccion, seccion: '4.2'}
       - {herramienta: dosis_pediatrica}
     debe_mencionar:
-      - criterio: La pauta de 15 mg/kg cada 6 horas es la pediátrica, pero con 12 años o más de 40 kg se aplica la posología de adulto.
-        cita: La dosis diaria recomendada de paracetamol es aproximadamente de 60 mg/kg/día, que se reparte en 4 ó 6 tomas diarias, es decir 15 mg/kg cada 6 horas ó 10 mg/kg cada 4 horas.
-        fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
-      - criterio: Con 12 años o más de 40 kg se usa la posología de adulto (un comprimido de 500 mg, 1 a 4 veces al día), no la pediátrica por peso.
+      - criterio: Indica que a esa edad y peso la ficha no aplica la pauta en mg/kg, sino su tramo por edad/peso o la dosis de adulto, y da la dosis de la ficha que lee
         cita: "Adultos y niños a partir de 12 años (o peso corporal superior a 40 kg):\n\n1 comprimido de 1 a 4 veces al día."
         fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
       - criterio: Indica los máximos por toma y diario de la ficha que lee y avisa si 825 mg (55 × 15) los supera.
