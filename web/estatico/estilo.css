@@ -215,3 +215,13 @@ html, .lateral, .ayuda-cuerpo, textarea, #respuesta table {
   border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--barra-activa); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Aviso de cierre por inactividad */
+.aviso-inactividad { position: fixed; left: 50%; transform: translateX(-50%); z-index: 10;
+  bottom: calc(110px + env(safe-area-inset-bottom)); width: min(520px, calc(100vw - 32px));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 18px;
+  background: #232220; color: #f2efe8; border: 1px solid var(--ambar); border-radius: 18px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / .35); }
+.aviso-inactividad b { color: var(--ambar); }
+.aviso-inactividad button { padding: 8px 18px; }
+@media (min-width: 900px) { .aviso-inactividad { bottom: 24px; } }

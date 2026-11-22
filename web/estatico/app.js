@@ -11,6 +11,7 @@ const EJEMPLOS = {
 };
 
 let viendo = null;      // consulta que se muestra
+let dentroAhora = false;
 
 async function api(ruta, datos) {
   const opciones = datos === undefined ? {} : {
@@ -33,7 +34,13 @@ function mostrar(dentro) {
   $("lateral").hidden = !dentro;
   document.querySelectorAll(".solo-dentro").forEach((e) => { e.hidden = !dentro; });
   if (dentro) cargarRecientes();
-  else { $("contrasena").value = ""; $("codigo").value = ""; limpiar(); }
+  else {
+    $("contrasena").value = ""; $("codigo").value = ""; limpiar();
+    $("recientes").replaceChildren(); $("n-recientes").textContent = "0"; $("sin-recientes").hidden = false;
+    $("aviso-inactividad").hidden = true;
+  }
+  dentroAhora = dentro;
+  actividad();
 }
 
 // ── Tipo de consulta (tarjetas y etiquetas del lateral, sincronizadas) ──
@@ -177,5 +184,47 @@ async function cargarRecientes() {
 function marcarReciente() {
   document.querySelectorAll("#recientes button").forEach((b) => b.classList.toggle("activo", b.dataset.id === viendo));
 }
+
+// ── Cierre por inactividad ──
+// 6 h (una jornada) sin ratón, teclado ni toques → se cierra la sesión y se borra la pantalla (aviso 1 min antes).
+// Mientras hay actividad se avisa al servidor cada 5 min para que no caduque por su cuenta.
+const INACTIVIDAD_MS = 6 * 3600 * 1000;   // una jornada de trabajo
+const AVISO_MS = 60 * 1000;
+const PING_MS = 5 * 60 * 1000;
+let ultimaActividad = Date.now();
+let ultimoPing = Date.now();
+
+function actividad() {
+  ultimaActividad = Date.now();
+  if (!$("aviso-inactividad").hidden) $("aviso-inactividad").hidden = true;
+  if (dentroAhora && Date.now() - ultimoPing > PING_MS) {
+    ultimoPing = Date.now();
+    api("/api/sesion").then((s) => { if (!s.activa) mostrar(false); }).catch(() => {});
+  }
+}
+let ultimoMovimiento = 0;
+["pointerdown", "keydown", "wheel", "touchstart", "scroll"].forEach((ev) =>
+  window.addEventListener(ev, actividad, { passive: true, capture: true }));
+window.addEventListener("pointermove", () => {          // el ratón se mueve mucho: como mucho 1 vez por segundo
+  const ahora = Date.now();
+  if (ahora - ultimoMovimiento > 1000) { ultimoMovimiento = ahora; actividad(); }
+}, { passive: true });
+$("seguir").addEventListener("click", actividad);
+
+async function comprobarInactividad() {
+  if (!dentroAhora) return;
+  if ($("enviar").disabled) { ultimaActividad = Date.now(); return; }  // consulta en marcha: nunca se cierra
+  const quieto = Date.now() - ultimaActividad;
+  if (quieto >= INACTIVIDAD_MS) {
+    await salir();
+    $("error-acceso").textContent = "Sesión cerrada por inactividad.";
+  } else if (quieto >= INACTIVIDAD_MS - AVISO_MS) {
+    $("segundos-cierre").textContent = Math.ceil((INACTIVIDAD_MS - quieto) / 1000);
+    $("aviso-inactividad").hidden = false;
+  }
+}
+setInterval(comprobarInactividad, 1000);
+// Al volver a la pestaña (o desbloquear el móvil) se comprueba enseguida.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) comprobarInactividad(); });
 
 api("/api/sesion").then((s) => mostrar(s.activa)).catch(() => mostrar(false));

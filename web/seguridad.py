@@ -18,7 +18,7 @@ CONFIG = Path(os.environ.get("FARMACLAW_WEB_CONFIG", Path.home() / ".config" / "
 
 MAX_FALLOS = 5               # intentos fallidos seguidos antes de bloquear
 BLOQUEO_S = 15 * 60          # duración del bloqueo
-INACTIVIDAD_S = 30 * 60      # la sesión caduca tras 30 min sin uso
+INACTIVIDAD_S = 6 * 3600     # la sesión caduca tras 6 h sin uso (una jornada)
 DURACION_MAX_S = 8 * 3600    # y, en cualquier caso, a las 8 h
 
 # scrypt: lento a propósito para que probar contraseñas a ciegas sea caro.

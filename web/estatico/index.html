@@ -134,6 +134,11 @@
   <button type="button" id="salir-movil">
     <span class="hex"><svg viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></span>Salir</button>
 </nav>
+<div id="aviso-inactividad" class="aviso-inactividad" role="alert" hidden>
+  <span>Por inactividad, la sesión se cerrará en <b id="segundos-cierre">60</b> s.</span>
+  <button type="button" id="seguir" class="principal">Seguir</button>
+</div>
+
 <dialog id="ayuda" aria-labelledby="ayuda-titulo">
   <div class="ayuda-cabecera">
     <h2 id="ayuda-titulo">Ayuda</h2>
@@ -186,7 +191,7 @@
     <ul>
       <li><b>No escribas datos que identifiquen a pacientes</b> (nombre, DNI, tarjeta sanitaria…).</li>
       <li>En un ordenador compartido, usa una ventana de incógnito y pulsa <b>Salir</b> al terminar.</li>
-      <li>La sesión se cierra sola tras 30 minutos sin uso (y siempre a las 8 horas).</li>
+      <li>La sesión se cierra sola tras <b>6 horas sin tocar nada</b> (ratón, teclado o pantalla), con un aviso un minuto antes; nunca durante una consulta. Al cerrarse, se borra la pantalla. Además, caduca siempre a las 8 horas.</li>
       <li>Tras 5 intentos fallidos de acceso, la entrada se bloquea 15 minutos.</li>
     </ul>
 
