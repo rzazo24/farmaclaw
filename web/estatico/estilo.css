@@ -151,6 +151,7 @@ button:disabled { opacity: .55; cursor: progress; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lista li > *::before { content: ""; width: 12px; height: 14px; flex: none; opacity: .7; background: var(--suave);
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.lista li > span { cursor: default; }
 .lista li > *:hover, .lista li > .activo { background: color-mix(in srgb, var(--ambar) 12%, transparent); color: var(--texto); }
 .lista li > .activo::before { background: var(--ambar); opacity: 1; }
 .lista .en-curso::before { background: var(--ambar); opacity: 1; animation: latido 1.2s ease-in-out infinite; }

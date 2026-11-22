@@ -53,6 +53,7 @@
     <li><a href="https://unpaywall.org/" target="_blank" rel="noopener noreferrer">Unpaywall</a></li>
     <li><a href="https://www.ncbi.nlm.nih.gov/books/NBK501922/" target="_blank" rel="noopener noreferrer">LactMed</a></li>
     <li><a href="https://www.e-lactancia.org/" target="_blank" rel="noopener noreferrer">e-lactancia (APILAM)</a></li>
+    <li><span title="Cálculo determinista, sin IA ni red">Calculadora Farmaclaw</span></li>
   </ul>
 </aside>
 
@@ -151,7 +152,7 @@
   </div>
   <div class="ayuda-cuerpo">
     <p>Farmaclaw responde consultas de consejo farmacéutico <b>solo con información de fuentes fiables</b>
-      (CIMA, PubMed, LactMed y e-lactancia) y <b>cita cada afirmación</b> con su enlace.</p>
+      (CIMA, PubMed, LactMed y e-lactancia) y <b>cita cada afirmación</b> con su enlace. Las cuentas (dosis por peso, conversiones) las hace una calculadora sin IA.</p>
     <p>De los artículos lee normalmente el <b>abstract</b>. Cuando hace falta más (una tabla, los métodos, un subgrupo,
       los conflictos de interés) busca el <b>texto completo</b> en copias legales de acceso abierto:
       PubMed Central, Europe PMC y Unpaywall.</p>
@@ -167,7 +168,7 @@
     <dl class="tipos-ayuda">
       <dt>Pregunta libre</dt><dd>Cualquier duda. Ej.: <i>¿Qué estudios recientes hay del aflibercept en oftalmología?</i></dd>
       <dt>Interacción</dt><dd>Dos o más fármacos; lee la sección 4.5 de todos. Ej.: <i>omeprazol y clopidogrel</i></dd>
-      <dt>Dosis</dt><dd>Posología autorizada (4.2), también pediátrica o con insuficiencia renal/hepática. Ej.: <i>ibuprofeno en niño de 15 kg</i></dd>
+      <dt>Dosis</dt><dd>Posología autorizada (4.2), también pediátrica o con insuficiencia renal/hepática. Las dosis por peso las calcula la calculadora de Farmaclaw. Indica el peso y la concentración (mg/mL). Ej.: <i>ibuprofeno 20 mg/ml en niño de 15 kg</i></dd>
       <dt>Lactancia</dt><dd>e-lactancia + LactMed + ficha 4.6. Ej.: <i>paracetamol</i></dd>
       <dt>Embarazo</dt><dd>Ficha 4.6, notas de seguridad y evidencia. Ej.: <i>ácido valproico</i></dd>
       <dt>Suministro</dt><dd>Problemas de suministro y alternativas, por nombre o código nacional. Ej.: <i>Somazina</i> o <i>CN 651877</i></dd>
@@ -180,6 +181,9 @@
       <li><i>[PMID: …]</i> es un dato del abstract. Si viene del texto completo, la cita lo indica: <i>[PMC12345678, sección Results]</i>, <i>[Europe PMC …]</i> o <i>[Texto completo vía Unpaywall …]</i>.</li>
       <li>Si el texto es un <b>preprint</b> (sin revisión por pares) o un manuscrito aceptado, la respuesta lo dice: un preprint no sirve para basar una recomendación.</li>
       <li>Muchos artículos de pago no tienen copia abierta, o la editorial bloquea su descarga: entonces solo se usa el abstract, y la respuesta da el enlace para abrirlo en el navegador si existe.</li>
+      <li>Las dosis por peso y las conversiones (mg ↔ mL, mcg ↔ mg, %, gotas) no se hacen de cabeza: las calcula la <b>calculadora de Farmaclaw</b>, sin IA, y se citan como <i>[Cálculo Farmaclaw]</i> junto a la operación paso a paso (p. ej. <i>15 kg × 7,5 mg/kg = 112,5 mg; 112,5 mg ÷ 20 mg/mL = 5,6 mL</i>) para que puedas comprobarla. Los datos de partida (mg/kg, tomas, máximos) salen siempre de la ficha técnica.</li>
+      <li>Los mL se redondean a 0,1 mL y la respuesta lo indica. Si se supera un máximo de la ficha, se avisa y se da la dosis limitada al máximo. Si el niño pesa más de 40 kg, se avisa de que puede aplicar ya la dosis de adulto.</li>
+      <li>Si la ficha tiene una tabla por peso o edad, se usa el tramo de la tabla. Si falta el peso, se pide (no se calcula por la edad). Las gotas solo se convierten si la ficha dice cuántas gotas hay en un mL.</li>
       <li>Lo que no viene de una fuente va marcado como <b>«Consejo práctico (no procede de las fuentes)»</b>.</li>
       <li>Si no encuentra información, lo dice: <b>«No he encontrado evidencia»</b>, y explica qué ha buscado.</li>
       <li>En interacciones, <b>contrasta siempre con Bot PLUS</b>.</li>
