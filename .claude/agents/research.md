@@ -60,7 +60,7 @@ Si la evidencia de PubMed y la ficha técnica difieren, muestra ambas y deja cla
 - Cita las dos cosas: [CIMA: …, sección 4.2] para los datos de partida y [Cálculo Farmaclaw] para el resultado, y muestra la operación (campo `calculo`). Si los mL están redondeados, dilo. Si hay avisos (máximo superado, peso > 40 kg), muéstralos.
 - Si la ficha da la dosis por tramos de peso o edad (tabla), usa el tramo que corresponda tal como lo da la ficha y no lo recalcules.
 - Si falta el peso, pídelo; no lo estimes por la edad.
-- Gotas: solo con el número de gotas por mL que indique la ficha de ese medicamento; nunca lo supongas.
+- Gotas: pasa a la herramienta el tamaño de la gota tal como lo dé la ficha de ese medicamento: en mg por gota (`mg_por_gota`, p. ej. "4 mg/gota") o en gotas por mL (`gotas_por_ml`). No conviertas tú uno en otro (nada de 100 ÷ 4 = 25 de cabeza) y nunca lo supongas. `dosis_pediatrica` devuelve entonces las gotas por toma, y `convertir` pasa entre gotas, mg y mL.
 
 ## Interacciones
 - Lee la sección 4.5 de AMBOS fármacos, siempre.

@@ -60,6 +60,21 @@ def _redondear_ml(ml: Decimal) -> Decimal:
     return ml.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
 
 
+def _gota(mg_por_gota, gotas_por_ml, obligatorio: bool) -> tuple[Decimal | None, Decimal | None]:
+    """Tamaño de la gota según la ficha: en mg por gota o en gotas por mL (uno de los dos, nunca supuesto)."""
+    if mg_por_gota is not None and gotas_por_ml is not None:
+        raise ToolError("Indica solo uno: «mg_por_gota» o «gotas_por_ml», el que dé la ficha técnica.")
+    if obligatorio and mg_por_gota is None and gotas_por_ml is None:
+        raise ToolError("Para trabajar con gotas hace falta el tamaño de la gota según la ficha técnica de ese "
+                        "medicamento: «mg_por_gota» (p. ej. 4 mg/gota) o «gotas_por_ml». No se supone nunca.")
+    return (_num("mg_por_gota", mg_por_gota) if mg_por_gota is not None else None,
+            _num("gotas_por_ml", gotas_por_ml) if gotas_por_ml is not None else None)
+
+
+def _redondear_gotas(gotas: Decimal) -> Decimal:
+    return gotas.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+
+
 # ───────────────────────── Dosis pediátrica ─────────────────────────
 
 @mcp.tool()
@@ -71,6 +86,8 @@ def dosis_pediatrica(
     tomas_al_dia: int | str | None = None,
     max_mg_toma: float | str | None = None,
     max_mg_dia: float | str | None = None,
+    mg_por_gota: float | str | None = None,
+    gotas_por_ml: float | str | None = None,
 ) -> dict:
     """Calcula una dosis pediátrica por peso, paso a paso (cálculo determinista, sin IA).
 
@@ -85,6 +102,8 @@ def dosis_pediatrica(
     tomas_al_dia: opcional; con él se calcula el total diario.
     max_mg_toma, max_mg_dia: máximos de la ficha (opcionales). Si se superan, se avisa y se
       devuelve también la dosis limitada al máximo.
+    mg_por_gota o gotas_por_ml (opcionales, uno de los dos, tal como lo dé la ficha): si se dan,
+      devuelve también las gotas por toma (exactas y redondeadas a gota entera).
     Devuelve mg y mL por toma (exacto y redondeado a 0,1 mL), mg/día, avisos, la operación
     escrita en "calculo" y la "fuente" para citar.
     """
@@ -111,6 +130,9 @@ def dosis_pediatrica(
         raise ToolError(f"{_fmt(dosis)} mg/kg por toma no es una dosis razonable (máximo admitido: "
                         f"{_fmt(DOSIS_MAX_MG_KG)} mg/kg). Revisa que sea la dosis por toma y no la diaria, o las unidades.")
     max_toma = _num("max_mg_toma", max_mg_toma) if max_mg_toma is not None else None
+    mg_gota, gotas_ml = _gota(mg_por_gota, gotas_por_ml, obligatorio=False)
+    if gotas_ml is not None and conc is None:
+        raise ToolError("Con «gotas_por_ml» hace falta «concentracion_mg_ml» para pasar de mg a mL y luego a gotas.")
     max_dia = _num("max_mg_dia", max_mg_dia) if max_mg_dia is not None else None
 
     avisos, pasos = [], []
@@ -168,6 +190,21 @@ def dosis_pediatrica(
     else:
         avisos.append("Sin concentración: solo se dan mg. Indica «concentracion_mg_ml» para obtener los mL.")
 
+    if mg_gota is not None or gotas_ml is not None:
+        if mg_gota is not None:
+            gotas = mg_toma / mg_gota
+            paso = f"{_fmt(mg_toma)} mg ÷ {_fmt(mg_gota)} mg/gota = {_fmt(gotas)} gotas"
+        else:
+            gotas = (mg_toma / conc) * gotas_ml
+            paso = f"{_fmt(mg_toma / conc)} mL × {_fmt(gotas_ml)} gotas/mL = {_fmt(gotas)} gotas"
+        gotas_red = _redondear_gotas(gotas)
+        pasos.append(f"{paso} → redondeado a gota entera: {_fmt(gotas_red, 0)} gotas")
+        resultado |= {
+            "gotas_por_toma_exacto": _f(gotas, 3),
+            "gotas_por_toma_redondeado": int(gotas_red),
+            "redondeo_gotas": "Gotas redondeadas a gota entera (a la más cercana); el valor exacto va en gotas_por_toma_exacto.",
+        }
+
     return {k: v for k, v in resultado.items() if v is not None} | {
         "avisos": avisos,
         "calculo": pasos,
@@ -177,7 +214,9 @@ def dosis_pediatrica(
                              "concentracion_mg_ml": _f(conc) if conc is not None else None,
                              "tomas_al_dia": int(tomas) if tomas is not None else None,
                              "max_mg_toma": _f(max_toma) if max_toma is not None else None,
-                             "max_mg_dia": _f(max_dia) if max_dia is not None else None},
+                             "max_mg_dia": _f(max_dia) if max_dia is not None else None,
+                             "mg_por_gota": _f(mg_gota) if mg_gota is not None else None,
+                             "gotas_por_ml": _f(gotas_ml) if gotas_ml is not None else None},
         "fuente": FUENTE,
         "nota": AVISO_FUENTE,
     }
@@ -210,12 +249,16 @@ def convertir(
     a: str,
     concentracion_mg_ml: float | str | None = None,
     gotas_por_ml: float | str | None = None,
+    mg_por_gota: float | str | None = None,
 ) -> dict:
     """Conversiones simples de unidades (cálculo determinista).
 
     Admite: mg ↔ mL (necesita concentracion_mg_ml), mcg ↔ mg, % → mg/mL (1 % = 10 mg/mL)
-    y gotas ↔ mL SOLO con gotas_por_ml tal como lo indique la ficha técnica (nunca se supone
-    un número de gotas por mL).
+    y gotas, SOLO con el tamaño de la gota que indique la ficha técnica (nunca se supone):
+    - gotas ↔ mg: con mg_por_gota (p. ej. 4), o con gotas_por_ml + concentracion_mg_ml.
+    - gotas ↔ mL: con gotas_por_ml, o con mg_por_gota + concentracion_mg_ml (las gotas/mL se
+      calculan aquí y se muestran en "calculo").
+    mg_por_gota y gotas_por_ml son alternativos: indica el que dé la ficha.
     """
     v = _num("valor", valor)
     de_u, a_u = _unidad("de", de), _unidad("a", a)
@@ -234,17 +277,36 @@ def convertir(
         r, op = v * 1000, f"{_fmt(v)} mg × 1000 = {_fmt(v * 1000)} mcg"
     elif par == ("%", "mg/ml"):
         r, op = v * 10, f"{_fmt(v)} % × 10 = {_fmt(v * 10)} mg/mL (1 % = 1 g/100 mL = 10 mg/mL)"
-    elif par in (("gotas", "ml"), ("ml", "gotas")):
-        if gotas_por_ml is None:
-            raise ToolError("Para pasar entre gotas y mL hace falta «gotas_por_ml» según la ficha técnica de "
-                            "ese medicamento: el tamaño de la gota cambia de un producto a otro y no se supone.")
-        g = _num("gotas_por_ml", gotas_por_ml)
-        r = v / g if par == ("gotas", "ml") else v * g
-        op = f"{_fmt(v)} gotas ÷ {_fmt(g)} gotas/mL = {_fmt(r)} mL" if par == ("gotas", "ml") else \
-             f"{_fmt(v)} mL × {_fmt(g)} gotas/mL = {_fmt(r)} gotas"
+    elif "gotas" in par and par in (("gotas", "ml"), ("ml", "gotas"), ("gotas", "mg"), ("mg", "gotas")):
+        mg_gota, gotas_ml = _gota(mg_por_gota, gotas_por_ml, obligatorio=True)
+        otra = a_u if de_u == "gotas" else de_u          # mg o ml
+        pasos = []
+        # Se completa el dato que falte con la concentración, mostrándolo.
+        if otra == "ml" and gotas_ml is None:
+            c = _num("concentracion_mg_ml", concentracion_mg_ml) if concentracion_mg_ml is not None else None
+            if c is None:
+                raise ToolError("Para pasar entre gotas y mL con «mg_por_gota» hace falta también «concentracion_mg_ml».")
+            gotas_ml = c / mg_gota
+            pasos.append(f"{_fmt(c)} mg/mL ÷ {_fmt(mg_gota)} mg/gota = {_fmt(gotas_ml)} gotas/mL")
+        if otra == "mg" and mg_gota is None:
+            c = _num("concentracion_mg_ml", concentracion_mg_ml) if concentracion_mg_ml is not None else None
+            if c is None:
+                raise ToolError("Para pasar entre gotas y mg con «gotas_por_ml» hace falta también «concentracion_mg_ml».")
+            mg_gota = c / gotas_ml
+            pasos.append(f"{_fmt(c)} mg/mL ÷ {_fmt(gotas_ml)} gotas/mL = {_fmt(mg_gota)} mg/gota")
+        if otra == "ml":
+            r = v / gotas_ml if de_u == "gotas" else v * gotas_ml
+            pasos.append(f"{_fmt(v)} gotas ÷ {_fmt(gotas_ml)} gotas/mL = {_fmt(r)} mL" if de_u == "gotas" else
+                         f"{_fmt(v)} mL × {_fmt(gotas_ml)} gotas/mL = {_fmt(r)} gotas")
+        else:
+            r = v * mg_gota if de_u == "gotas" else v / mg_gota
+            pasos.append(f"{_fmt(v)} gotas × {_fmt(mg_gota)} mg/gota = {_fmt(r)} mg" if de_u == "gotas" else
+                         f"{_fmt(v)} mg ÷ {_fmt(mg_gota)} mg/gota = {_fmt(r)} gotas")
+        op = "; ".join(pasos)
     else:
         raise ToolError(f"Conversión no admitida: {NOMBRE[de_u]} → {NOMBRE[a_u]}. Admitidas: mg ↔ mL "
-                        "(con concentración), mcg ↔ mg, % → mg/mL y gotas ↔ mL (con gotas_por_ml de la ficha).")
+                        "(con concentración), mcg ↔ mg, % → mg/mL y gotas ↔ mg/mL (con mg_por_gota o "
+                        "gotas_por_ml de la ficha).")
 
     return {"resultado": _f(r, 6), "unidad": NOMBRE[a_u], "calculo": op, "fuente": FUENTE, "nota": AVISO_FUENTE}
 

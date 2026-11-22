@@ -171,7 +171,8 @@ def test_gotas_solo_con_gotas_por_ml_de_la_ficha():
 
 @pytest.mark.parametrize("args, mensaje", [
     ((10, "mg", "ml"), "concentracion_mg_ml"),
-    ((10, "mg", "gotas"), "Conversión no admitida"),
+    ((10, "mcg", "gotas"), "Conversión no admitida"),
+    ((10, "mg", "gotas"), "tamaño de la gota"),
     ((10, "kg", "mg"), "no reconocida"),
     ((-1, "mg", "mcg"), "mayor que 0"),
     (("diez", "mg", "mcg"), "tiene que ser un número"),
@@ -179,3 +180,66 @@ def test_gotas_solo_con_gotas_por_ml_de_la_ficha():
 def test_conversiones_con_error(args, mensaje):
     with pytest.raises(ToolError, match=mensaje):
         convertir(*args)
+
+
+# ── Gotas con mg por gota ──
+
+def test_mg_a_gotas_con_mg_por_gota():
+    r = convertir(120, "mg", "gotas", mg_por_gota=4)
+    assert r["resultado"] == 30 and r["calculo"] == "120 mg ÷ 4 mg/gota = 30 gotas"
+    assert convertir(30, "gotas", "mg", mg_por_gota=4)["resultado"] == 120
+
+
+def test_ml_a_gotas_con_mg_por_gota_y_concentracion():
+    r = convertir(1.2, "ml", "gotas", mg_por_gota=4, concentracion_mg_ml=100)
+    assert r["resultado"] == 30
+    assert r["calculo"] == "100 mg/mL ÷ 4 mg/gota = 25 gotas/mL; 1,2 mL × 25 gotas/mL = 30 gotas"
+    assert convertir(30, "gotas", "ml", mg_por_gota=4, concentracion_mg_ml=100)["resultado"] == 1.2
+
+
+def test_gotas_a_mg_con_gotas_por_ml_y_concentracion():
+    r = convertir(30, "gotas", "mg", gotas_por_ml=25, concentracion_mg_ml=100)
+    assert r["resultado"] == 120 and r["calculo"].startswith("100 mg/mL ÷ 25 gotas/mL = 4 mg/gota")
+
+
+@pytest.mark.parametrize("kwargs, mensaje", [
+    ({"mg_por_gota": 4, "gotas_por_ml": 25}, "Indica solo uno"),
+    ({}, "tamaño de la gota"),
+    ({"mg_por_gota": 0}, "mayor que 0"),
+])
+def test_gotas_parametros_incorrectos(kwargs, mensaje):
+    with pytest.raises(ToolError, match=mensaje):
+        convertir(120, "mg", "gotas", **kwargs)
+
+
+def test_ml_gotas_con_mg_por_gota_sin_concentracion_da_error():
+    with pytest.raises(ToolError, match="concentracion_mg_ml"):
+        convertir(1.2, "ml", "gotas", mg_por_gota=4)
+
+
+def test_dosis_con_gotas_por_mg_por_gota():
+    r = dosis(8, 15, concentracion_mg_ml=100, mg_por_gota=4)                 # 120 mg = 1,2 mL = 30 gotas
+    assert r["mg_por_toma"] == 120 and r["ml_por_toma_redondeado"] == 1.2
+    assert r["gotas_por_toma_exacto"] == 30 and r["gotas_por_toma_redondeado"] == 30
+    assert "120 mg ÷ 4 mg/gota = 30 gotas → redondeado a gota entera: 30 gotas" in r["calculo"]
+    assert "gota entera" in r["redondeo_gotas"]
+
+
+def test_dosis_con_gotas_redondeadas():
+    r = dosis(7, 15, concentracion_mg_ml=100, mg_por_gota=4)                 # 105 mg ÷ 4 = 26,25 → 26
+    assert r["gotas_por_toma_exacto"] == 26.25 and r["gotas_por_toma_redondeado"] == 26
+
+
+def test_dosis_con_gotas_por_ml():
+    r = dosis(8, 15, concentracion_mg_ml=100, gotas_por_ml=25)               # 1,2 mL × 25 = 30
+    assert r["gotas_por_toma_redondeado"] == 30
+    assert "1,2 mL × 25 gotas/mL = 30 gotas → redondeado a gota entera: 30 gotas" in r["calculo"]
+
+
+@pytest.mark.parametrize("kwargs, mensaje", [
+    ({"concentracion_mg_ml": 100, "mg_por_gota": 4, "gotas_por_ml": 25}, "Indica solo uno"),
+    ({"gotas_por_ml": 25}, "hace falta «concentracion_mg_ml»"),
+])
+def test_dosis_gotas_parametros_incorrectos(kwargs, mensaje):
+    with pytest.raises(ToolError, match=mensaje):
+        dosis(8, 15, **kwargs)
