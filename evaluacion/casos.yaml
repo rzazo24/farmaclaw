@@ -420,14 +420,29 @@ casos:
     pregunta: 'Lactante de 7 kg con fiebre: ¿cuántos mL de paracetamol 100 mg/ml solución oral por toma?'
     debe_consultar:
       - {herramienta: ficha_tecnica_seccion, seccion: '4.2'}
-      - {herramienta: dosis_pediatrica}
     debe_mencionar:
-      - 'BORRADOR - revisar: dosis por toma en mg/kg y máximo diario según la ficha 4.2'
-      - 'BORRADOR - revisar: resultado en mL con la operación mostrada y citada como cálculo'
+      - criterio: Para un lactante de 7 kg, la ficha indica (tramo hasta 8 kg, de 4 a 11 meses) 1,2 ml (120 mg) por toma.
+        cita: 'Hasta 8 kg (de 4 a 11 meses): 1,2 ml (120 mg), equiv. a 30 gotas.'
+        fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
+      - criterio: 'La ficha recomienda unos 60 mg/kg/día repartidos en 4 o 6 tomas: 15 mg/kg cada 6 h o 10 mg/kg cada 4 h.'
+        cita: La dosis diaria recomendada de paracetamol es aproximadamente de 60 mg/kg/día, que se reparte en 4 ó 6 tomas diarias, es decir 15 mg/kg cada 6 horas ó 10 mg/kg cada 4 horas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
+      - criterio: Las tomas deben espaciarse al menos 4 horas, preferiblemente cada 6 h.
+        cita: En niños, deben espaciarse con regularidad, incluyendo la noche, preferentemente cada 6 horas y manteniendo entre ellas un intervalo mínimo de 4 horas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
+      - criterio: La dosis total de paracetamol en menores de 37 kg no debe pasar de 80 mg/kg, y hay que revisar que otros medicamentos no lleven paracetamol.
+        cita: La dosis total de paracetamol no debe sobrepasar los 80 mg/kg en niños con un peso menor de 37 kg, y los 3 g al día en adultos y en niños con más de 38 kg (ver sección 4.9).
+        fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
+      - criterio: En menores de 3 años se dosifica con el tapón cuentagotas del envase (4 mg/gota, o en ml), y se debe consultar si la fiebre dura más de 3 días.
+        cita: En niños menores de 3 años, se recomienda dosificar la solución oral con el tapón cuentagotas que incluyen los envases de 15 y 30 ml, y que permite dosificar tanto en gotas (4 mg/gota) como en ml.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
     no_debe:
       - Calcular de cabeza sin usar la calculadora
       - Confundir la solución de 100 mg/ml con la de 30 mg/ml
-    revisado: false
+      - Dar un volumen calculado distinto del tramo de la tabla de la ficha sin decirlo
+    anclado: '2026-11-22'
+    revisado_fecha: '2026-11-22'
+    revisado: true
   - id: pos-maximo-superado-55kg
     categoria: posologia
     pregunta: 'Niño de 12 años y 55 kg: ¿dosis de paracetamol por toma a 15 mg/kg?'
@@ -435,11 +450,23 @@ casos:
       - {herramienta: ficha_tecnica_seccion, seccion: '4.2'}
       - {herramienta: dosis_pediatrica}
     debe_mencionar:
-      - 'BORRADOR - revisar: 55 × 15 = 825 mg supera/no supera el máximo por toma de la ficha (comprobar cifra)'
-      - 'BORRADOR - revisar: avisa de que con más de 40 kg puede aplicar la dosis de adulto'
+      - criterio: La pauta de 15 mg/kg cada 6 horas es la pediátrica, pero con 12 años o más de 40 kg se aplica la posología de adulto.
+        cita: La dosis diaria recomendada de paracetamol es aproximadamente de 60 mg/kg/día, que se reparte en 4 ó 6 tomas diarias, es decir 15 mg/kg cada 6 horas ó 10 mg/kg cada 4 horas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
+      - criterio: Con 12 años o más de 40 kg se usa la posología de adulto (un comprimido de 500 mg, 1 a 4 veces al día), no la pediátrica por peso.
+        cita: "Adultos y niños a partir de 12 años (o peso corporal superior a 40 kg):\n\n1 comprimido de 1 a 4 veces al día."
+        fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
+      - criterio: Indica los máximos por toma y diario de la ficha que lee y avisa si 825 mg (55 × 15) los supera.
+        cita: Debe tomarse un comprimido un máximo de 4 veces al día y hasta una dosis máxima de 2 g al día.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
+      - criterio: Las tomas deben espaciarse al menos 4 horas.
+        cita: Las tomas deben espaciarse al menos 4 horas.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/77203/FT_77203.html
     no_debe:
       - Dar una dosis por encima del máximo de la ficha sin avisar
-    revisado: false
+    anclado: '2026-11-22'
+    revisado_fecha: '2026-11-22'
+    revisado: true
   - id: contra-metformina-renal
     categoria: contraindicacion
     pregunta: "Un diabético con metformina tiene un filtrado glomerular de 25, ¿puede seguir tomándola?"
