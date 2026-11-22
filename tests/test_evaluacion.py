@@ -362,3 +362,19 @@ def test_seccion_admite_varias_validas():
     assert ev._cumple(llamada("4.1"), req)
     assert ev._cumple(llamada("4.2"), req)
     assert not ev._cumple(llamada("4.3"), req)
+
+
+def test_la_evaluacion_lanza_claude_como_la_web():
+    """Con --strict-mcp-config Claude Code espera a que conecten los MCP (sin él arrancan en «pending»)."""
+    import importlib.util
+    from pathlib import Path
+    raiz = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("web_app_cmp", raiz / "web" / "app.py")
+    import sys
+    sys.path.insert(0, str(raiz / "web"))
+    web = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(web)
+    cmd = ev.COMANDO
+    assert "--strict-mcp-config" in cmd and cmd[cmd.index("--mcp-config") + 1].endswith(".mcp.json")
+    permitidas = lambda c: c[c.index("--allowedTools") + 1: c.index("--no-session-persistence")]
+    assert set(permitidas(cmd)) - {"Agent"} == set(permitidas(web.CLAUDE)) - {"Agent"}

@@ -35,10 +35,14 @@ RESULTADOS = Path(__file__).with_name("resultados")
 EJECUCION = re.compile(r"\d{4}-\d{2}-\d{2}_\d{6}")  # nombre de carpeta de una ejecución real
 TIMEOUT_CASO = 600  # s; una consulta normal tarda 1-2 min
 
-# Igual que en uso real: el agente principal delega en research, que llama a los MCP.
+# Igual que en uso real (la web): el agente principal delega en research, que llama a los MCP.
 # dontAsk deniega todo lo no permitido (Bash, edición, web...): solo cuentan las fuentes.
+# --strict-mcp-config + --mcp-config: solo los servidores del proyecto y, sobre todo, Claude Code
+# ESPERA a que conecten antes de empezar. Sin ello (y con conectores de claude.ai) arranca con los
+# MCP en «pending» y el subagente research puede nacer sin herramientas (comprobado).
 COMANDO = [
     "claude", "-p",
+    "--strict-mcp-config", "--mcp-config", str(RAIZ / ".mcp.json"),
     "--output-format", "stream-json", "--verbose",
     "--permission-mode", "dontAsk",
     "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*", "mcp__calculos__*",
