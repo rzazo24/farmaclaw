@@ -143,6 +143,20 @@ def a_html(markdown: str) -> str:
     return html.replace("<a href=", '<a target="_blank" rel="noopener noreferrer" href=')
 
 
+SERVIDORES_MCP = list(json.loads((RAIZ / ".mcp.json").read_text())["mcpServers"])
+
+
+def aviso_mcp(init: dict) -> str | None:
+    """Con el primer evento de claude -p (system/init): aviso si algún servidor del proyecto no ha conectado."""
+    estado = {s.get("name"): s.get("status") for s in init.get("mcp_servers") or []}
+    fallan = [f"{NOMBRES.get(n, n)} ({estado.get(n, 'sin cargar')})" for n in SERVIDORES_MCP
+              if estado.get(n) != "connected"]
+    if not fallan:
+        return None
+    return ("Aviso: no han conectado " + ", ".join(fallan)
+            + ". La respuesta puede estar incompleta: si es así, repite la consulta en unos segundos.")
+
+
 class Consultas:
     """Una consulta a la vez (el agente tarda ~1 min y gasta de la ventana)."""
 
@@ -197,6 +211,11 @@ class Consultas:
             return None
         if ev.get("type") == "result":
             return ev.get("result") or "\n".join(ev.get("errors", []))
+        if ev.get("type") == "system" and ev.get("subtype") == "init":
+            if aviso := aviso_mcp(ev):
+                t["pasos"].append(aviso)
+                log.warning("Consulta con servidores MCP sin conectar: %s", aviso)
+            return None
         contenido = ev.get("message", {}).get("content") if ev.get("type") == "assistant" else None
         for bloque in contenido if isinstance(contenido, list) else []:
             if bloque.get("type") == "tool_use":

@@ -1,6 +1,7 @@
 """Pruebas de la web: acceso (contraseña + TOTP), bloqueo, sesiones y construcción de la consulta. Sin red."""
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -433,3 +434,25 @@ def test_claude_se_lanza_con_margen_para_los_mcp(monkeypatch):
     assert web.entorno_claude()["MCP_TIMEOUT"] == "60000"
     monkeypatch.setenv("MCP_TIMEOUT", "90000")                      # si ya está fijado, se respeta
     assert web.entorno_claude()["MCP_TIMEOUT"] == "90000"
+
+
+def test_aviso_si_algun_servidor_mcp_no_ha_conectado(caplog):
+    def init(estados):
+        return {"type": "system", "subtype": "init",
+                "mcp_servers": [{"name": n, "status": e} for n, e in estados.items()]}
+    todos = {n: "connected" for n in web.SERVIDORES_MCP}
+    assert web.aviso_mcp(init(todos)) is None
+    aviso = web.aviso_mcp(init(todos | {"pubmed": "pending", "calculos": "failed"}))
+    assert "PubMed (pending)" in aviso and "Cálculo (failed)" in aviso and "repite la consulta" in aviso
+    assert "CIMA (sin cargar)" in web.aviso_mcp(init({n: e for n, e in todos.items() if n != "cima"}))
+
+    t = {"pasos": []}
+    with caplog.at_level("WARNING", logger="farmaclaw-web"):
+        linea = json.dumps(init(todos | {"cima": "pending"})).encode()
+        assert web.Consultas._evento(t, linea) is None
+    assert t["pasos"] and t["pasos"][0].startswith("Aviso: no han conectado CIMA (pending)")
+    assert "servidores MCP sin conectar" in caplog.text
+
+
+def test_los_servidores_esperados_son_los_de_mcp_json():
+    assert set(web.SERVIDORES_MCP) == {"cima", "pubmed", "elactancia", "calculos"}
