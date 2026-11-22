@@ -159,6 +159,32 @@ systemctl --user list-timers farmaclaw-lactmed.timer    # próxima ejecución
 ```
 Se ejecuta el día 1 de cada mes; si la VM estaba apagada, al arrancar.
 
+## Web privada (PC y móvil)
+`web/` es una página para hacer consultas desde cualquier navegador (por ejemplo, el PC compartido de la farmacia) sin abrir la cuenta de Claude: solo se ve Farmaclaw, no el resto de chats. Cada consulta lanza `claude -p` en la VM, así que usa la sesión de Claude Code y gasta de la suscripción como cualquier otra consulta. **Es para uso personal**: abrirla a otras personas exigiría usar la API.
+
+- **Diseño:** tipos de consulta en tarjetas, progreso en directo (fuentes que va leyendo), respuesta con enlaces, tema claro/oscuro y ayuda integrada. En el PC, menú lateral con las consultas recientes de la sesión (solo en memoria; se borran al reiniciar) y atajos `Ctrl K` / `Ctrl Enter`; en el móvil, barra inferior.
+- **Acceso:** contraseña (mínimo 14 caracteres, guardada como hash scrypt) + código TOTP de una app de autenticación (2FAS, Google Authenticator…). Tras 5 fallos se bloquea 15 min; la sesión caduca a los 30 min sin uso y siempre a las 8 h.
+- **Lo que puede hacer Claude desde la web:** solo delegar en el agente `research` y usar los tres servidores MCP (`--tools Agent`, `--strict-mcp-config`, `dontAsk`). Ni terminal ni archivos ni conectores de claude.ai: aunque alguien entrara, no podría tocar la VM.
+- **Publicación:** la web escucha solo en `127.0.0.1:8787` y sale a internet con HTTPS mediante [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (gratis, sin dominio propio ni abrir puertos).
+
+```bash
+# 1. Contraseña y código del móvil (en una terminal de la VM, no por el chat de Claude)
+uv run python web/configurar.py          # guarda ~/.config/farmaclaw/web.json (permisos 600)
+
+# 2. Servicio que la arranca con la VM
+ln -sf ~/farmaclaw/systemd/farmaclaw-web.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now farmaclaw-web
+
+# 3. Publicarla (la primera vez Tailscale puede pedir autorizar Funnel para esta máquina)
+tailscale funnel --bg --https=8443 http://127.0.0.1:8787
+#    → https://<tu-maquina>.<tu-tailnet>.ts.net:8443
+tailscale funnel --https=8443 off        # para dejar de publicarla
+```
+
+> - Se usa el puerto 8443 para no interferir con otros servicios publicados en el 443 de la misma máquina.
+> - La dirección `*.ts.net` aparece en los registros públicos de certificados: habrá bots que la prueben. Por eso el doble factor y el bloqueo por intentos.
+> - Para cambiar la contraseña o el código, vuelve a ejecutar `web/configurar.py` y reinicia el servicio.
+
 ## Pruebas
 ```bash
 uv run pytest                    # todas: sin red + llamadas reales a las APIs (~10 s)
@@ -185,8 +211,9 @@ mcp/pubmed/lactmed.py            descarga y búsqueda del índice local de LactM
 mcp/elactancia/server.py         MCP de e-lactancia
 tests/                           pruebas pytest (sin red y con APIs reales)
 evaluacion/                      evaluación del agente: casos reales, informe y revisión manual
+web/                             web privada de consultas (FastAPI + contraseña y TOTP)
 scripts/arrancar.sh              sesión tmux con Claude Code + Remote Control
-systemd/                         servicio de arranque y temporizador mensual de LactMed
+systemd/                         servicios de arranque (Claude, web) y temporizador mensual de LactMed
 .github/workflows/pruebas.yml    integración continua (GitHub Actions)
 data/                            índices descargados (no se sube a git)
 ```

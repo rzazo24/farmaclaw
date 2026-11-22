@@ -1,0 +1,13 @@
+[Unit]
+Description=Farmaclaw: web privada de consultas (solo 127.0.0.1; sale a internet por Tailscale Funnel)
+After=default.target
+
+[Service]
+# bash -i carga ~/.bashrc: PATH de uv y claude, y NCBI_API_KEY para PubMed.
+ExecStart=/bin/bash -ic 'exec uv run python web/app.py'
+WorkingDirectory=%h/farmaclaw
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

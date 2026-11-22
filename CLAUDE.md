@@ -8,6 +8,8 @@ Agente de research para consejo farmacéutico que funciona dentro de Claude Code
 
 Todos se registran en `.mcp.json` y Claude Code los arranca solo.
 
+Web privada (`web/`): página para consultar desde cualquier navegador; lanza `claude -p` limitado al agente y a estos MCP (`--tools Agent`, `--strict-mcp-config`). Sale a internet por Tailscale Funnel (puerto 8443) con contraseña + TOTP. La contraseña y el secreto viven en `~/.config/farmaclaw/web.json`: nunca los pidas ni los muestres en el chat; se cambian con `web/configurar.py` en una terminal.
+
 ## Consultas clínicas
 Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`) pasándole la pregunta del usuario tal cual (sin añadir indicaciones, pistas ni lo que esperas que responda) y **devuelve su respuesta tal cual**: sin resumirla, sin reformularla ("el agente dice…") y sin añadir información propia, que no tendría cita. Si quieres comentar algo (p. ej. una mejora del proyecto), sepáralo claramente después de la respuesta. Reglas del agente:
 - Solo información obtenida de las herramientas en la conversación; si no la hay: "No he encontrado evidencia".

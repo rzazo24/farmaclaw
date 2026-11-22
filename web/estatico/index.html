@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1c1b19">
+<title>Farmaclaw</title>
+<link rel="icon" href="/estatico/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/estatico/estilo.css">
+<script src="/estatico/tema.js"></script>
+<script src="/estatico/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+
+<!-- Menú lateral (solo PC y con sesión iniciada) -->
+<aside class="lateral solo-pc" id="lateral" hidden>
+  <div class="marca">
+    <img src="/estatico/icono.svg" alt="" width="36" height="36">
+    <span>Farmaclaw</span>
+  </div>
+  <nav class="menu">
+    <button type="button" class="item activo" id="menu-consultar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>Consultar<kbd>Ctrl K</kbd></button>
+    <button type="button" class="item" id="menu-nueva">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva consulta</button>
+    <button type="button" class="item abrir-ayuda">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.2v.1"/></svg>Ayuda</button>
+    <button type="button" class="item" id="menu-salir">
+      <svg viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>Salir</button>
+  </nav>
+
+  <div class="chips" id="chips">
+    <button type="button" data-tipo="libre">Libre</button>
+    <button type="button" data-tipo="interaccion">Interacción</button>
+    <button type="button" data-tipo="dosis">Dosis</button>
+    <button type="button" data-tipo="lactancia">Lactancia</button>
+    <button type="button" data-tipo="embarazo">Embarazo</button>
+    <button type="button" data-tipo="suministro">Suministro</button>
+  </div>
+
+  <h3 class="titulo-lateral"><span class="punto"></span>Recientes · <span id="n-recientes">0</span></h3>
+  <ul class="lista" id="recientes"></ul>
+  <p class="vacio" id="sin-recientes">Aún no hay consultas en esta sesión.</p>
+
+  <h3 class="titulo-lateral"><span class="punto"></span>Fuentes</h3>
+  <ul class="lista fuentes">
+    <li><a href="https://cima.aemps.es/" target="_blank" rel="noopener noreferrer">CIMA (AEMPS)</a></li>
+    <li><a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener noreferrer">PubMed</a></li>
+    <li><a href="https://www.ncbi.nlm.nih.gov/books/NBK501922/" target="_blank" rel="noopener noreferrer">LactMed</a></li>
+    <li><a href="https://www.e-lactancia.org/" target="_blank" rel="noopener noreferrer">e-lactancia (APILAM)</a></li>
+  </ul>
+</aside>
+
+<main>
+  <header class="cabecera">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><path d="M32 6 54 19v26L32 58 10 45V19z" class="logo-hex"/><path d="M27 20h10v8h8v10h-8v8H27v-8h-8V28h8z" class="logo-cruz"/></svg>
+    </div>
+    <div class="titulo">
+      <h1>Farma<span>claw</span></h1>
+      <p>Consejo farmacéutico con fuentes citadas.<span class="solo-pc-inline"> Pulsa <b>Ctrl Enter</b> para consultar.</span></p>
+    </div>
+    <button class="redondo abrir-ayuda solo-dentro solo-pc" type="button" aria-label="Ayuda" title="Ayuda" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.2v.1"/></svg>
+    </button>
+    <button class="redondo boton-tema" type="button" aria-label="Cambiar tema claro u oscuro" title="Tema">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
+    </button>
+  </header>
+
+  <form id="acceso" class="tarjeta acceso" hidden autocomplete="off">
+    <div class="hex hex-grande" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h2>Acceso privado</h2>
+    <label>Contraseña
+      <input id="contrasena" type="password" autocomplete="off" required>
+    </label>
+    <label>Código de 2FAS
+      <input id="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+    </label>
+    <button type="submit" class="principal">Entrar</button>
+    <p id="error-acceso" class="error" role="alert"></p>
+  </form>
+
+  <section id="consultas" hidden>
+    <form id="formulario">
+      <h2 class="seccion">Tipo de consulta</h2>
+      <div class="tipos" role="radiogroup">
+        <label class="tipo"><input type="radio" name="comando" value="libre" checked>
+          <span class="hex"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z" /></svg></span><span>Pregunta libre</span></label>
+        <label class="tipo"><input type="radio" name="comando" value="interaccion">
+          <span class="hex"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg></span><span>Interacción</span></label>
+        <label class="tipo"><input type="radio" name="comando" value="dosis">
+          <span class="hex"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="M9.7 8.7l4.6 6.6"/></svg></span><span>Dosis</span></label>
+        <label class="tipo"><input type="radio" name="comando" value="lactancia">
+          <span class="hex"><svg viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg></span><span>Lactancia</span></label>
+        <label class="tipo"><input type="radio" name="comando" value="embarazo">
+          <span class="hex"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><span>Embarazo</span></label>
+        <label class="tipo"><input type="radio" name="comando" value="suministro">
+          <span class="hex"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><span>Suministro</span></label>
+      </div>
+
+      <h2 class="seccion">Consulta</h2>
+      <div class="tarjeta">
+        <textarea id="texto" rows="3" maxlength="2000" required aria-label="Consulta"></textarea>
+        <div class="pie-consulta">
+          <p class="aviso">No escribas datos que identifiquen a pacientes.</p>
+          <button id="enviar" type="submit" class="principal">Consultar</button>
+        </div>
+      </div>
+    </form>
+
+    <div id="progreso" hidden>
+      <h2 class="seccion" id="estado"></h2>
+      <ul id="pasos"></ul>
+    </div>
+    <p id="error-consulta" class="error" role="alert"></p>
+    <h2 class="seccion" id="titulo-respuesta" hidden></h2>
+    <article id="respuesta"></article>
+  </section>
+</main>
+</div>
+
+<nav id="barra" class="barra solo-movil" hidden>
+  <button type="button" id="ir-consultar" class="activo">
+    <span class="hex"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg></span>Consultar</button>
+  <button type="button" id="nueva">
+    <span class="hex"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Nueva</button>
+  <button type="button" class="abrir-ayuda">
+    <span class="hex"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.2v.1"/></svg></span>Ayuda</button>
+  <button type="button" id="salir-movil">
+    <span class="hex"><svg viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></span>Salir</button>
+</nav>
+<dialog id="ayuda" aria-labelledby="ayuda-titulo">
+  <div class="ayuda-cabecera">
+    <h2 id="ayuda-titulo">Ayuda</h2>
+    <button type="button" class="redondo" id="cerrar-ayuda" aria-label="Cerrar ayuda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="ayuda-cuerpo">
+    <p>Farmaclaw responde consultas de consejo farmacéutico <b>solo con información de fuentes fiables</b>
+      (CIMA, PubMed, LactMed y e-lactancia) y <b>cita cada afirmación</b> con su enlace.</p>
+
+    <h3>Cómo consultar</h3>
+    <ol>
+      <li>Elige el <b>tipo de consulta</b> (en el PC también con las etiquetas del menú lateral).</li>
+      <li>Escribe la consulta y pulsa <b>Consultar</b>. Tarda entre 30 segundos y 2 minutos: verás en directo las fuentes que va leyendo.</li>
+      <li>Cuando termine, la respuesta aparece debajo. Pulsa los enlaces para ir a la fuente original.</li>
+    </ol>
+
+    <h3>Tipos de consulta</h3>
+    <dl class="tipos-ayuda">
+      <dt>Pregunta libre</dt><dd>Cualquier duda. Ej.: <i>¿Qué estudios recientes hay del aflibercept en oftalmología?</i></dd>
+      <dt>Interacción</dt><dd>Dos o más fármacos; lee la sección 4.5 de todos. Ej.: <i>omeprazol y clopidogrel</i></dd>
+      <dt>Dosis</dt><dd>Posología autorizada (4.2), también pediátrica o con insuficiencia renal/hepática. Ej.: <i>ibuprofeno en niño de 15 kg</i></dd>
+      <dt>Lactancia</dt><dd>e-lactancia + LactMed + ficha 4.6. Ej.: <i>paracetamol</i></dd>
+      <dt>Embarazo</dt><dd>Ficha 4.6, notas de seguridad y evidencia. Ej.: <i>ácido valproico</i></dd>
+      <dt>Suministro</dt><dd>Problemas de suministro y alternativas, por nombre o código nacional. Ej.: <i>Somazina</i> o <i>CN 651877</i></dd>
+    </dl>
+
+    <h3>Cómo leer la respuesta</h3>
+    <ul>
+      <li>Empieza por una <b>respuesta breve</b>; luego vienen el <b>detalle</b> y las <b>referencias</b>.</li>
+      <li>Las citas indican la fuente exacta: <i>[CIMA: medicamento, sección 4.5]</i>, <i>[PMID: 12345678]</i>, <i>[LactMed: …]</i>, <i>[e-lactancia: …]</i>.</li>
+      <li>Lo que no viene de una fuente va marcado como <b>«Consejo práctico (no procede de las fuentes)»</b>.</li>
+      <li>Si no encuentra información, lo dice: <b>«No he encontrado evidencia»</b>, y explica qué ha buscado.</li>
+      <li>En interacciones, <b>contrasta siempre con Bot PLUS</b>.</li>
+    </ul>
+
+    <h3>Recientes</h3>
+    <p>En el PC, el menú lateral guarda las consultas de esta sesión: púlsalas para volver a ver la respuesta sin repetir la búsqueda.
+      Se borran al reiniciar el servidor.</p>
+
+    <h3 class="solo-pc-bloque">Atajos de teclado</h3>
+    <ul class="solo-pc-bloque">
+      <li><kbd>Ctrl</kbd> + <kbd>K</kbd>: ir al cuadro de consulta.</li>
+      <li><kbd>Ctrl</kbd> + <kbd>Enter</kbd>: consultar.</li>
+      <li><kbd>Esc</kbd>: cerrar esta ayuda.</li>
+    </ul>
+
+    <h3>Privacidad y seguridad</h3>
+    <ul>
+      <li><b>No escribas datos que identifiquen a pacientes</b> (nombre, DNI, tarjeta sanitaria…).</li>
+      <li>En un ordenador compartido, usa una ventana de incógnito y pulsa <b>Salir</b> al terminar.</li>
+      <li>La sesión se cierra sola tras 30 minutos sin uso (y siempre a las 8 horas).</li>
+      <li>Tras 5 intentos fallidos de acceso, la entrada se bloquea 15 minutos.</li>
+    </ul>
+
+    <h3>Límites</h3>
+    <ul>
+      <li>Es una ayuda para la consulta: <b>no sustituye el juicio profesional</b> ni la ficha técnica completa.</li>
+      <li>Solo hace <b>una consulta a la vez</b>, y cada una gasta de la suscripción de Claude.</li>
+      <li>Contenido de e-lactancia (APILAM) con licencia CC BY-NC-SA 4.0: uso no comercial y con atribución.</li>
+    </ul>
+  </div>
+</dialog>
+</body>
+</html>
