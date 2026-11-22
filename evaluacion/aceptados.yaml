@@ -1,0 +1,9 @@
+# Criterios dados por buenos por el farmacéutico: no vuelven a salir en «Para revisar».
+# Si cambia el texto del criterio, la aceptación deja de aplicarse.
+- caso: contra-metformina-renal
+  criterio: La metformina está contraindicada en cualquier acidosis metabólica aguda,
+    como la acidosis láctica.
+  veredicto: no_cumple
+  motivo: Contraindicación no relacionada con la pregunta; la respuesta sobre FG 25
+    es correcta
+  fecha: '2026-11-22'
