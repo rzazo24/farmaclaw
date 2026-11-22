@@ -191,6 +191,11 @@ def test_describe_los_pasos_del_progreso():
     assert web.describir_paso("mcp__cima__ficha_tecnica_seccion", {"seccion": "4.6"}) == "CIMA · ficha_tecnica_seccion (4.6)"
     assert web.describir_paso("Agent", {}).startswith("Consultando")
     assert web.describir_paso("Read", {}) is None
+    assert web.describir_paso("mcp__calculos__dosis_pediatrica", {"peso_kg": 15, "dosis_mg_kg": 7.5}) == \
+        "Cálculo · dosis_pediatrica (15 kg × 7.5 mg/kg)"
+    assert web.describir_paso("mcp__calculos__dosis_pediatrica",
+                              {"peso_kg": 15, "dosis_mg_kg_dia": 30, "tomas_al_dia": 3}) == \
+        "Cálculo · dosis_pediatrica (15 kg × 30 mg/kg/día en 3 tomas)"
     assert web.describir_paso("mcp__pubmed__texto_completo", {"articulo": "41177553", "seccion": "tablas"}) == \
         "Texto completo (41177553 · tablas)"
 

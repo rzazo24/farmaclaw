@@ -111,7 +111,12 @@ def describir_paso(nombre: str, entrada: dict) -> str | None:
         return None
     _, servidor, herramienta = nombre.split("__", 2)
     if herramienta == "dosis_pediatrica":
-        return f"Cálculo · dosis_pediatrica ({entrada.get('peso_kg', '?')} kg × {entrada.get('dosis_mg_kg', '?')} mg/kg)"
+        peso = entrada.get("peso_kg", "?")
+        if entrada.get("dosis_mg_kg_dia") is not None:
+            dosis = f"{entrada['dosis_mg_kg_dia']} mg/kg/día en {entrada.get('tomas_al_dia', '?')} tomas"
+        else:
+            dosis = f"{entrada.get('dosis_mg_kg', '?')} mg/kg"
+        return f"Cálculo · dosis_pediatrica ({peso} kg × {dosis})"
     if herramienta == "texto_completo":
         detalle = f"{entrada.get('articulo', '')} · {entrada.get('seccion', 'indice')}"
         return f"Texto completo ({detalle})"
