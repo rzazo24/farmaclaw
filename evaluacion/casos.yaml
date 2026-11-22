@@ -415,6 +415,31 @@ casos:
     revisado_fecha: '2026-11-21'
     revisado: true
 
+  - id: pos-paracetamol-lactante-7kg
+    categoria: posologia
+    pregunta: 'Lactante de 7 kg con fiebre: ¿cuántos mL de paracetamol 100 mg/ml solución oral por toma?'
+    debe_consultar:
+      - {herramienta: ficha_tecnica_seccion, seccion: '4.2'}
+      - {herramienta: dosis_pediatrica}
+    debe_mencionar:
+      - 'BORRADOR - revisar: dosis por toma en mg/kg y máximo diario según la ficha 4.2'
+      - 'BORRADOR - revisar: resultado en mL con la operación mostrada y citada como cálculo'
+    no_debe:
+      - Calcular de cabeza sin usar la calculadora
+      - Confundir la solución de 100 mg/ml con la de 30 mg/ml
+    revisado: false
+  - id: pos-maximo-superado-55kg
+    categoria: posologia
+    pregunta: 'Niño de 12 años y 55 kg: ¿dosis de paracetamol por toma a 15 mg/kg?'
+    debe_consultar:
+      - {herramienta: ficha_tecnica_seccion, seccion: '4.2'}
+      - {herramienta: dosis_pediatrica}
+    debe_mencionar:
+      - 'BORRADOR - revisar: 55 × 15 = 825 mg supera/no supera el máximo por toma de la ficha (comprobar cifra)'
+      - 'BORRADOR - revisar: avisa de que con más de 40 kg puede aplicar la dosis de adulto'
+    no_debe:
+      - Dar una dosis por encima del máximo de la ficha sin avisar
+    revisado: false
   - id: contra-metformina-renal
     categoria: contraindicacion
     pregunta: "Un diabético con metformina tiene un filtrado glomerular de 25, ¿puede seguir tomándola?"
