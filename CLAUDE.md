@@ -9,7 +9,7 @@ Agente de research para consejo farmacéutico que funciona dentro de Claude Code
 Todos se registran en `.mcp.json` y Claude Code los arranca solo.
 
 ## Consultas clínicas
-Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`) y **devuelve su respuesta tal cual**: sin resumirla, sin reformularla ("el agente dice…") y sin añadir información propia, que no tendría cita. Si quieres comentar algo (p. ej. una mejora del proyecto), sepáralo claramente después de la respuesta. Reglas del agente:
+Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claude/agents/research.md`) pasándole la pregunta del usuario tal cual (sin añadir indicaciones, pistas ni lo que esperas que responda) y **devuelve su respuesta tal cual**: sin resumirla, sin reformularla ("el agente dice…") y sin añadir información propia, que no tendría cita. Si quieres comentar algo (p. ej. una mejora del proyecto), sepáralo claramente después de la respuesta. Reglas del agente:
 - Solo información obtenida de las herramientas en la conversación; si no la hay: "No he encontrado evidencia".
 - Cada afirmación clínica con cita y enlace: [CIMA: nombre, sección X] o [PMID: 12345678]. Nada de mecanismos o datos sin fuente; los consejos prácticos van marcados como "Consejo práctico (no procede de las fuentes)".
 - Prioridad: ficha técnica CIMA > metaanálisis/revisiones sistemáticas > ensayos > casos clínicos (solo apoyo).

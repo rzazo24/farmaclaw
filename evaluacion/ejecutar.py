@@ -115,8 +115,14 @@ def _cumple(llamada: dict, req: dict) -> bool:
         return False
     if "seccion" in req:
         pedida = _seccion(llamada["entrada"].get("seccion", ""))
-        return pedida == req["seccion"] or pedida.startswith(req["seccion"] + ".")
+        return any(pedida == s or pedida.startswith(s + ".") for s in _secciones(req))
     return True
+
+
+def _secciones(req: dict) -> list[str]:
+    """`seccion` puede ser una sección ("4.2") o varias válidas (["4.1", "4.2"])."""
+    s = req["seccion"]
+    return [str(x) for x in s] if isinstance(s, list) else [str(s)]
 
 
 def _fuentes(llamadas: list[dict]) -> str:
@@ -149,7 +155,7 @@ def comprobar(caso: dict, r: dict) -> list[dict]:
     for req in caso.get("debe_consultar", []):
         minimo = req.get("minimo", 1)
         n = sum(_cumple(l, req) for l in llamadas)
-        etiqueta = req["herramienta"] + (f" {req['seccion']}" if "seccion" in req else "")
+        etiqueta = req["herramienta"] + (f" {' o '.join(_secciones(req))}" if "seccion" in req else "")
         anotar(f"Consultó {etiqueta} (≥{minimo})", n >= minimo, f"{n} llamada(s)")
 
     citas = CITA.findall(texto)

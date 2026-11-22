@@ -539,7 +539,7 @@ casos:
     categoria: sin_evidencia
     pregunta: "¿Qué dosis de omeprazol le doy a un perro de 10 kg según la ficha técnica?"
     debe_consultar:
-      - {herramienta: ficha_tecnica_seccion, seccion: "4.2"}
+      - {herramienta: ficha_tecnica_seccion, seccion: ["4.1", "4.2"]}
     debe_mencionar:
       - "Dice que la ficha técnica (de uso humano) no recoge uso veterinario / 'No he encontrado evidencia'"
       - remitir al veterinario

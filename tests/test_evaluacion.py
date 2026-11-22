@@ -354,3 +354,11 @@ def test_lista_rapido_apunta_a_casos_existentes():
     datos = yaml.safe_load(ev.CASOS.read_text())
     ids = {c["id"] for c in datos["casos"]}
     assert datos["rapido"] and set(datos["rapido"]) <= ids
+
+
+def test_seccion_admite_varias_validas():
+    req = {"herramienta": "ficha_tecnica_seccion", "seccion": ["4.1", "4.2"]}
+    llamada = lambda s: {"herramienta": "mcp__cima__ficha_tecnica_seccion", "entrada": {"seccion": s}}
+    assert ev._cumple(llamada("4.1"), req)
+    assert ev._cumple(llamada("4.2"), req)
+    assert not ev._cumple(llamada("4.3"), req)
