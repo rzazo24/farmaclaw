@@ -133,7 +133,7 @@ def test_describe_los_pasos_del_progreso():
     assert web.describir_paso("Agent", {}).startswith("Consultando")
     assert web.describir_paso("Read", {}) is None
     assert web.describir_paso("mcp__pubmed__texto_completo", {"articulo": "41177553", "seccion": "tablas"}) == \
-        "PubMed Central · texto_completo (41177553 · tablas)"
+        "Texto completo (41177553 · tablas)"
 
 
 class ConsultasFalsas:
