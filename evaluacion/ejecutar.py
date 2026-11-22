@@ -17,6 +17,7 @@ Cada ejecución crea evaluacion/resultados/AAAA-MM-DD_HHMMSS/ con:
 import argparse
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -49,6 +50,18 @@ COMANDO = [
     "--no-session-persistence",
 ]
 
+# La VM tiene 1 CPU: los 4 servidores MCP tardan ~30 s en conectar a la vez (importar el SDK `mcp`
+# cuesta ~2 s por servidor). MCP_TIMEOUT (ms) da margen para que no se queden fuera si va cargada.
+MCP_TIMEOUT_MS = "60000"
+
+
+def entorno_claude() -> dict:
+    """Entorno para lanzar claude -p: el del usuario + MCP_TIMEOUT (si no lo ha fijado ya)."""
+    entorno = dict(os.environ)
+    entorno.setdefault("MCP_TIMEOUT", MCP_TIMEOUT_MS)
+    return entorno
+
+
 # Alias de secciones: se reutilizan los del servidor de CIMA para no desincronizarse.
 _spec = importlib.util.spec_from_file_location("cima_server", RAIZ / "mcp" / "cima" / "server.py")
 _cima = importlib.util.module_from_spec(_spec)
@@ -68,7 +81,7 @@ def lanzar(caso: dict, carpeta: Path) -> dict:
     inicio = time.monotonic()
     try:
         proc = subprocess.run(COMANDO + [prompt], cwd=RAIZ, capture_output=True, text=True, timeout=TIMEOUT_CASO,
-                              stdin=subprocess.DEVNULL)
+                              stdin=subprocess.DEVNULL, env=entorno_claude())
         salida, error = proc.stdout, proc.stderr.strip()
     except subprocess.TimeoutExpired as e:
         salida, error = (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""), f"timeout ({TIMEOUT_CASO} s)"

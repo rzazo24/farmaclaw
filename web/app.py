@@ -17,6 +17,7 @@ import asyncio
 import ipaddress
 import json
 import logging
+import os
 import secrets
 import sys
 import time
@@ -51,6 +52,17 @@ CLAUDE = [
     "--allowedTools", "Agent", "mcp__cima__*", "mcp__pubmed__*", "mcp__elactancia__*", "mcp__calculos__*",
     "--no-session-persistence",
 ]
+
+# La VM tiene 1 CPU: los servidores MCP tardan ~30 s en conectar. MCP_TIMEOUT (ms) da margen.
+MCP_TIMEOUT_MS = "60000"
+
+
+def entorno_claude() -> dict:
+    """Entorno para lanzar claude -p: el del servicio + MCP_TIMEOUT (si no está ya fijado)."""
+    entorno = dict(os.environ)
+    entorno.setdefault("MCP_TIMEOUT", MCP_TIMEOUT_MS)
+    return entorno
+
 
 NOMBRES = {"cima": "CIMA", "pubmed": "PubMed", "elactancia": "e-lactancia", "calculos": "Cálculo"}
 
@@ -155,7 +167,7 @@ class Consultas:
         respuesta, error = "", ""
         try:
             proc = await asyncio.create_subprocess_exec(
-                *CLAUDE, prompt, cwd=RAIZ, stdin=asyncio.subprocess.DEVNULL,
+                *CLAUDE, prompt, cwd=RAIZ, stdin=asyncio.subprocess.DEVNULL, env=entorno_claude(),
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=16 * 1024 * 1024)
             try:
                 async with asyncio.timeout(TIMEOUT_S):

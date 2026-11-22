@@ -426,3 +426,10 @@ def test_aviso_de_ocupado_como_mucho_una_vez_por_minuto(caplog):
         t[0] += 61
         limite.avisar_ocupado("cola llena")
     assert caplog.text.count("servidor ocupado") == 2
+
+
+def test_claude_se_lanza_con_margen_para_los_mcp(monkeypatch):
+    monkeypatch.delenv("MCP_TIMEOUT", raising=False)
+    assert web.entorno_claude()["MCP_TIMEOUT"] == "60000"
+    monkeypatch.setenv("MCP_TIMEOUT", "90000")                      # si ya está fijado, se respeta
+    assert web.entorno_claude()["MCP_TIMEOUT"] == "90000"

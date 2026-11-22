@@ -96,7 +96,8 @@ def anclar(caso: dict, modelo: str) -> dict:
                           "criterios_borrador": borradores}, ensure_ascii=False, indent=1)
     try:
         proc = subprocess.run(COMANDO + ["--system-prompt", PROMPT.read_text(), "--model", modelo, entrada],
-                              cwd=ev.RAIZ, capture_output=True, text=True, timeout=TIMEOUT, stdin=subprocess.DEVNULL)
+                              cwd=ev.RAIZ, capture_output=True, text=True, timeout=TIMEOUT, stdin=subprocess.DEVNULL,
+                              env=ev.entorno_claude())
         salida = proc.stdout
     except subprocess.TimeoutExpired:
         return {"error": f"timeout ({TIMEOUT} s)"}

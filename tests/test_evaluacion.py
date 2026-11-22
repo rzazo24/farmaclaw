@@ -378,3 +378,8 @@ def test_la_evaluacion_lanza_claude_como_la_web():
     assert "--strict-mcp-config" in cmd and cmd[cmd.index("--mcp-config") + 1].endswith(".mcp.json")
     permitidas = lambda c: c[c.index("--allowedTools") + 1: c.index("--no-session-persistence")]
     assert set(permitidas(cmd)) - {"Agent"} == set(permitidas(web.CLAUDE)) - {"Agent"}
+
+
+def test_evaluacion_lanza_claude_con_margen_para_los_mcp(monkeypatch):
+    monkeypatch.delenv("MCP_TIMEOUT", raising=False)
+    assert ev.entorno_claude()["MCP_TIMEOUT"] == "60000"
