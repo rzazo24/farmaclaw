@@ -437,7 +437,7 @@ casos:
         cita: En niños menores de 3 años, se recomienda dosificar la solución oral con el tapón cuentagotas que incluyen los envases de 15 y 30 ml, y que permite dosificar tanto en gotas (4 mg/gota) como en ml.
         fuente: https://cima.aemps.es/cima/dochtml/ft/49302/FT_49302.html
     no_debe:
-      - Calcular de cabeza sin usar la calculadora
+      - Hacer cuentas de cabeza (si calcula algo, debe ser con la calculadora)
       - Confundir la solución de 100 mg/ml con la de 30 mg/ml
       - Dar un volumen calculado distinto del tramo de la tabla de la ficha sin decirlo
     anclado: '2026-11-22'
