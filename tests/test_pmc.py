@@ -1,5 +1,8 @@
 """Texto completo (PMC, Europe PMC, Unpaywall): procesado del XML y del PDF (sin red) y casos reales (red)."""
 
+import socket
+
+import httpx
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
@@ -107,10 +110,109 @@ def test_identificadores_admitidos():
     assert pubmed._identificar("https://doi.org/10.1136/bmjophth-2025-002509") == {"doi": "10.1136/bmjophth-2025-002509"}
 
 
-def test_no_descarga_de_la_red_local():
-    assert not pubmed._url_publica("http://127.0.0.1:8787/")
-    assert not pubmed._url_publica("http://localhost/x.pdf")
+# ── Filtro de URLs públicas y descargas de PDF (DNS y HTTP simulados, sin red) ──
+
+DNS = {
+    "publico.example": ["93.184.216.34"],
+    "tailnet.example": ["100.64.1.2"],          # CGNAT / Tailscale
+    "local.example": ["127.0.0.1"],
+    "red10.example": ["10.1.2.3"],
+    "red192.example": ["192.168.1.10"],
+    "enlace.example": ["169.254.169.254"],      # link-local (metadatos de nubes)
+    "v6local.example": ["::1"],
+    "v6unica.example": ["fc00::1"],
+    "mixto.example": ["93.184.216.34", "10.0.0.5"],   # una pública y una privada: se rechaza
+}
+
+
+@pytest.fixture
+def dns_falso(monkeypatch):
+    def getaddrinfo(host, port, *a, **k):
+        if host not in DNS:
+            raise OSError("nombre desconocido")
+        familia = lambda ip: socket.AF_INET6 if ":" in ip else socket.AF_INET
+        return [(familia(ip), socket.SOCK_STREAM, 6, "", (ip, port)) for ip in DNS[host]]
+    monkeypatch.setattr(pubmed.socket, "getaddrinfo", getaddrinfo)
+
+
+@pytest.mark.parametrize("host", ["tailnet.example", "local.example", "red10.example", "red192.example",
+                                  "enlace.example", "v6local.example", "v6unica.example", "mixto.example"])
+def test_rechaza_direcciones_no_publicas(dns_falso, host):
+    assert not pubmed._url_publica(f"https://{host}/articulo.pdf")
+
+
+def test_acepta_una_direccion_publica(dns_falso):
+    assert pubmed._url_publica("https://publico.example/articulo.pdf")
+
+
+def test_solo_http_y_https(dns_falso):
+    assert not pubmed._url_publica("ftp://publico.example/a.pdf")
     assert not pubmed._url_publica("file:///etc/passwd")
+    assert not pubmed._url_publica("https://desconocido.example/a.pdf")
+
+
+PDF_FALSO = b"%PDF-1.4 contenido de prueba"
+
+
+def _cliente(monkeypatch, manejador):
+    monkeypatch.setattr(pubmed, "_descargas", httpx.Client(transport=httpx.MockTransport(manejador),
+                                                         follow_redirects=False))
+
+
+def test_descarga_y_sigue_redirecciones_publicas(dns_falso, monkeypatch):
+    def manejador(req):
+        if req.url.path == "/a":
+            return httpx.Response(302, headers={"location": "/b"})            # relativa
+        if req.url.path == "/b":
+            return httpx.Response(301, headers={"location": "https://publico.example/c.pdf"})
+        return httpx.Response(200, content=PDF_FALSO)
+    _cliente(monkeypatch, manejador)
+    assert pubmed._descargar_pdf("https://publico.example/a") == PDF_FALSO
+
+
+def test_rechaza_una_redireccion_a_127_0_0_1(dns_falso, monkeypatch):
+    pedidas = []
+
+    def manejador(req):
+        pedidas.append(str(req.url))
+        if req.url.host == "publico.example":
+            return httpx.Response(302, headers={"location": "http://local.example:8787/api/consulta"})
+        return httpx.Response(200, content=PDF_FALSO)
+    _cliente(monkeypatch, manejador)
+    assert pubmed._descargar_pdf("https://publico.example/a.pdf") is None
+    assert pedidas == ["https://publico.example/a.pdf"]                    # nunca llega a pedir la interna
+
+
+def test_rechaza_mas_de_cinco_redirecciones(dns_falso, monkeypatch):
+    def manejador(req):
+        n = int(req.url.path.strip("/") or 0)
+        return httpx.Response(302, headers={"location": f"/{n + 1}"})
+    _cliente(monkeypatch, manejador)
+    assert pubmed._descargar_pdf("https://publico.example/0") is None
+
+
+def test_cinco_redirecciones_aun_se_aceptan(dns_falso, monkeypatch):
+    def manejador(req):
+        n = int(req.url.path.strip("/") or 0)
+        return httpx.Response(302, headers={"location": f"/{n + 1}"}) if n < 5 else httpx.Response(200, content=PDF_FALSO)
+    _cliente(monkeypatch, manejador)
+    assert pubmed._descargar_pdf("https://publico.example/0") == PDF_FALSO
+
+
+def test_limite_de_tamano_durante_la_descarga(dns_falso, monkeypatch):
+    monkeypatch.setattr(pubmed, "MAX_PDF", 1000)
+
+    def trozos():
+        for _ in range(20):
+            yield b"x" * 100                                                # 2000 bytes, sin Content-Length
+
+    def manejador(req):
+        if req.url.path == "/anunciado":
+            return httpx.Response(200, headers={"content-length": "5000"}, content=b"x" * 10)
+        return httpx.Response(200, content=trozos())
+    _cliente(monkeypatch, manejador)
+    assert pubmed._descargar_pdf("https://publico.example/sin-longitud") is None
+    assert pubmed._descargar_pdf("https://publico.example/anunciado") is None
 
 
 TEXTO_PDF = """Fármaco X frente a placebo

@@ -34,7 +34,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - PubMed: artículos recientes pueden no tener MeSH todavía.
 - PMC (texto completo): PMID → PMC con `elink` (`linkname=pubmed_pmc`); el conversor `idconv` se ha movido a pmc.ncbi.nlm.nih.gov y no encuentra muchos artículos. `efetch db=pmc` da JATS XML; algunas editoriales (p. ej. Cochrane) no permiten el XML completo: viene sin `<body>` y con un comentario "does not allow downloading of the full text".
 - Europe PMC: `fullTextXML` da 500 a ratos con el mismo artículo (se reintenta y se informa como fallo del servicio, no como «no existe»); las páginas `?pdf=render` responden 403 a programas: no se usan.
-- Unpaywall: exige `email` en cada consulta (variable `UNPAYWALL_EMAIL`, nunca en el repo). Los PDF se descargan solo de URLs públicas (no red local), máx. 25 MB.
+- Unpaywall: exige `email` en cada consulta (variable `UNPAYWALL_EMAIL`, nunca en el repo). Los PDF se descargan solo de URLs cuyas IP sean todas `is_global` (fuera red local y 100.64.0.0/10 de Tailscale), con redirecciones seguidas a mano (máx. 5, cada destino validado) y máx. 25 MB contados durante la descarga.
 - LactMed: la web tiene reCAPTCHA y `efetch` no da el texto de Bookshelf; se usa el tar.gz oficial de `ftp.ncbi.nlm.nih.gov/pub/litarch/` (NBK501922). Títulos en inglés USAN (acetaminophen, albuterol, dipyrone): ver `SINONIMOS`.
 
 ## Cómo probar

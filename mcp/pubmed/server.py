@@ -318,7 +318,11 @@ UNPAYWALL = "https://api.unpaywall.org/v2/{}"
 UNPAYWALL_EMAIL = os.environ.get("UNPAYWALL_EMAIL")
 USER_AGENT = "farmaclaw/0.1 (+https://github.com/rzazo24/farmaclaw)"
 MAX_PDF = 25 * 1024 * 1024
+MAX_REDIRECCIONES = 5
+# _web: solo para las APIs fijas (Europe PMC y Unpaywall). Las descargas de PDF van por _descargas,
+# sin redirecciones automáticas: cada salto se valida a mano con _url_publica.
 _web = httpx.Client(timeout=TIMEOUT, follow_redirects=True, headers={"User-Agent": USER_AGENT})
+_descargas = httpx.Client(timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": USER_AGENT})
 _docs: dict[str, tuple[float, dict]] = {}  # artículo → documento ya procesado (para pedir secciones sin repetir descargas)
 
 
@@ -333,7 +337,7 @@ SIN_RESPUESTA = SinRespuesta()
 
 
 def _web_get(url: str, params: dict | None = None, tipo: str = "json"):
-    """GET a Europe PMC, Unpaywall o al PDF, con timeout de 15 s y un reintento.
+    """GET a las APIs de Europe PMC o Unpaywall, con timeout de 15 s y un reintento.
     Devuelve None si no existe (404) y SIN_RESPUESTA si el servicio no responde o da error (5xx)."""
     for intento in (1, 2):
         try:
@@ -345,13 +349,7 @@ def _web_get(url: str, params: dict | None = None, tipo: str = "json"):
                 time.sleep(1)
                 continue
             r.raise_for_status()
-            if tipo == "json":
-                return r.json()
-            if tipo == "bytes":
-                if len(r.content) > MAX_PDF:
-                    raise ToolError("El PDF supera 25 MB; no lo descargo.")
-                return r.content
-            return r.text
+            return r.json() if tipo == "json" else r.text
         except httpx.TimeoutException:
             log.warning("timeout en %s (intento %d)", url, intento)
         except (httpx.HTTPError, ValueError) as e:
@@ -361,18 +359,63 @@ def _web_get(url: str, params: dict | None = None, tipo: str = "json"):
 
 
 def _url_publica(url: str) -> bool:
-    """Evita que un enlace externo apunte a la propia máquina o a la red local."""
+    """Solo http/https y solo si TODAS las IP a las que resuelve el nombre son globales.
+
+    is_global descarta la propia máquina, la red local, link-local, IPv6 únicas locales (fc00::/7)
+    y también 100.64.0.0/10 (CGNAT), que es el rango de Tailscale: la VM está en la tailnet y
+    is_private no lo cubre."""
     try:
         p = httpx.URL(url)
         if p.scheme not in ("http", "https") or not p.host:
             return False
-        for info in socket.getaddrinfo(p.host, None):
-            ip = ipaddress.ip_address(info[4][0])
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+        direcciones = socket.getaddrinfo(p.host, p.port or (443 if p.scheme == "https" else 80))
+        if not direcciones:
+            return False
+        for info in direcciones:
+            ip = ipaddress.ip_address(info[4][0].split("%")[0])  # quita el «%interfaz» de IPv6
+            if not ip.is_global:
                 return False
         return True
-    except (OSError, ValueError):
+    except (OSError, ValueError, httpx.InvalidURL):
         return False
+
+
+def _descargar_pdf(url: str) -> bytes | None:
+    """Descarga un PDF de una copia abierta. Las redirecciones se siguen a mano (máx. 5) y cada destino
+    se valida con _url_publica; el límite de 25 MB se comprueba mientras se descarga, no solo con
+    Content-Length (que puede faltar o mentir). Devuelve None si algo no cuadra (y lo deja en el log)."""
+    for salto in range(MAX_REDIRECCIONES + 1):
+        if not _url_publica(url):
+            log.warning("PDF descartado: %s no es una dirección pública (salto %d)", url, salto)
+            return None
+        try:
+            with _descargas.stream("GET", url) as r:
+                if r.is_redirect:
+                    destino = r.headers.get("location")
+                    if not destino:
+                        log.warning("PDF descartado: redirección sin destino en %s", url)
+                        return None
+                    url = str(httpx.URL(url).join(destino))  # admite destinos relativos
+                    continue
+                if r.status_code != 200:
+                    log.warning("PDF no disponible en %s (HTTP %d)", url, r.status_code)
+                    return None
+                declarado = r.headers.get("content-length", "")
+                if declarado.isdigit() and int(declarado) > MAX_PDF:
+                    log.warning("PDF descartado: %s anuncia %s bytes (máx. %d)", url, declarado, MAX_PDF)
+                    return None
+                datos = bytearray()
+                for trozo in r.iter_bytes():
+                    datos += trozo
+                    if len(datos) > MAX_PDF:
+                        log.warning("PDF descartado: %s supera %d bytes durante la descarga", url, MAX_PDF)
+                        return None
+                return bytes(datos)
+        except httpx.HTTPError as e:
+            log.warning("error al descargar el PDF de %s: %s", url, e)
+            return None
+    log.warning("PDF descartado: más de %d redirecciones (última: %s)", MAX_REDIRECCIONES, url)
+    return None
 
 
 def _identificar(articulo: str) -> dict:
@@ -492,9 +535,7 @@ def _desde_unpaywall(ids: dict, intentos: list[str]) -> dict | None:
                      key=lambda l: orden.index(l.get("version")) if l.get("version") in orden else 9)
     for lugar in lugares[:3]:
         url = lugar["url_for_pdf"]
-        if not _url_publica(url):
-            continue
-        datos = _web_get(url, tipo="bytes")
+        datos = _descargar_pdf(url)
         if not datos:
             continue
         try:
