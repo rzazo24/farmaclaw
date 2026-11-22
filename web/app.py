@@ -5,7 +5,7 @@ la sesión de Claude Code de la VM y gasta de la ventana de la suscripción.
 
 Seguridad (ver web/seguridad.py):
 - Escucha solo en 127.0.0.1; a internet sale por Tailscale Funnel (HTTPS).
-- Contraseña + código TOTP del móvil, bloqueo tras 5 fallos, sesión que caduca.
+- Contraseña + código TOTP del móvil, bloqueo por IP tras 5 fallos, freno global, sesión que caduca.
 - Claude solo puede usar el agente y las herramientas MCP (que solo leen CIMA,
   PubMed y e-lactancia): ni terminal ni archivos, aunque alguien lograra entrar.
 
@@ -13,6 +13,7 @@ Arranque: uv run python web/app.py   (o el servicio systemd farmaclaw-web)
 """
 
 import asyncio
+import ipaddress
 import json
 import logging
 import secrets
@@ -75,6 +76,30 @@ def titulo_de(comando: str, texto: str) -> str:
     texto = " ".join(texto.strip().lstrip("/").split())
     texto = texto if len(texto) <= 70 else texto[:69] + "…"
     return f"{ETIQUETAS[comando]}: {texto}" if ETIQUETAS.get(comando) else texto
+
+
+PROXY_DE_CONFIANZA = "127.0.0.1"  # Tailscale Funnel entrega las peticiones desde aquí
+
+
+def ip_cliente(request: Request) -> str:
+    """IP real del cliente.
+
+    Tailscale Funnel reenvía a 127.0.0.1:8787 y pone la IP original en X-Forwarded-For
+    (comprobado: además sustituye la que mande el cliente). Solo se confía en esa cabecera
+    si la conexión viene de 127.0.0.1; si no, cualquiera podría inventársela. Si trae varias
+    IP se usa la última: es la que añade el último proxy, el nuestro; las anteriores las
+    escribe el cliente y no son de fiar."""
+    conexion = request.client.host if request.client else "desconocida"
+    if conexion != PROXY_DE_CONFIANZA:
+        return conexion
+    valores = ",".join(request.headers.getlist("x-forwarded-for"))
+    ips = [v.strip() for v in valores.split(",") if v.strip()]
+    if not ips:
+        return conexion
+    try:
+        return str(ipaddress.ip_address(ips[-1]))
+    except ValueError:
+        return conexion
 
 
 def describir_paso(nombre: str, entrada: dict) -> str | None:
@@ -193,15 +218,19 @@ def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None) ->
     @app.post("/api/entrar")
     async def entrar(request: Request, response: Response):
         datos = await request.json()
-        if espera := guardia.bloqueado():
+        ip = ip_cliente(request)
+        if espera := guardia.bloqueado(ip):
+            log.warning("Intento desde %s, que está bloqueada", ip)
             raise HTTPException(429, f"Demasiados intentos. Prueba dentro de {espera // 60 + 1} min.")
-        token = await asyncio.to_thread(guardia.entrar, str(datos.get("contrasena", "")), str(datos.get("codigo", "")))
+        token = await asyncio.to_thread(guardia.entrar, str(datos.get("contrasena", "")),
+                                        str(datos.get("codigo", "")), ip)
         if not token:
-            log.warning("Intento de acceso fallido")
+            if retraso := guardia.retraso():  # freno global: muchos fallos en total → respuesta más lenta
+                await asyncio.sleep(retraso)
             raise HTTPException(401, "Contraseña o código incorrectos.")
         response.set_cookie(COOKIE, token, httponly=True, secure=True, samesite="strict",
                             max_age=seguridad.DURACION_MAX_S, path="/")
-        log.info("Acceso correcto")
+        log.info("Acceso correcto desde %s", ip)
         return {"ok": True}
 
     @app.post("/api/salir")

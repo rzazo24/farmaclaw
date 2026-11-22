@@ -67,14 +67,73 @@ def test_admite_el_codigo_anterior_por_desfase_de_reloj(guardia, reloj):
     assert guardia.entrar(CONTRASENA, codigo(reloj, -30))
 
 
-def test_bloquea_tras_cinco_fallos(guardia, reloj):
+def test_bloquea_una_ip_tras_cinco_fallos(guardia, reloj):
     for _ in range(seguridad.MAX_FALLOS):
-        guardia.entrar("mala", "123456")
-    assert guardia.bloqueado() > 0
-    assert guardia.entrar(CONTRASENA, codigo(reloj)) is None   # ni con las buenas
+        guardia.entrar("mala", "123456", "1.1.1.1")
+    assert guardia.bloqueado("1.1.1.1") > 0
+    assert guardia.entrar(CONTRASENA, codigo(reloj), "1.1.1.1") is None   # ni con las buenas
     reloj.t += seguridad.BLOQUEO_S + 60
-    assert guardia.bloqueado() == 0
-    assert guardia.entrar(CONTRASENA, codigo(reloj))
+    assert guardia.bloqueado("1.1.1.1") == 0
+    assert guardia.entrar(CONTRASENA, codigo(reloj), "1.1.1.1")
+
+
+def test_una_ip_bloqueada_no_bloquea_a_otra(guardia, reloj):
+    for _ in range(seguridad.MAX_FALLOS):
+        guardia.entrar("mala", "123456", "203.0.113.7")                   # el bot
+    assert guardia.bloqueado("203.0.113.7") > 0
+    assert guardia.bloqueado("198.51.100.20") == 0
+    assert guardia.entrar(CONTRASENA, codigo(reloj), "198.51.100.20")     # yo, desde otra IP
+
+
+def test_un_acierto_pone_a_cero_los_fallos_de_esa_ip(guardia, reloj):
+    for _ in range(seguridad.MAX_FALLOS - 1):
+        guardia.entrar("mala", "123456", "1.1.1.1")
+    reloj.t += 31
+    assert guardia.entrar(CONTRASENA, codigo(reloj), "1.1.1.1")
+    guardia.entrar("mala", "123456", "1.1.1.1")
+    assert guardia.bloqueado("1.1.1.1") == 0
+
+
+def test_freno_global_retrasa_pero_no_bloquea(guardia, reloj):
+    assert guardia.retraso() == 0
+    for i in range(seguridad.UMBRAL_GLOBAL + 20):                          # ataque desde muchas IP
+        guardia._anotar_fallo(f"10.0.{i // 250}.{i % 250}")
+    assert guardia.retraso() == pytest.approx(20 * seguridad.RETRASO_POR_FALLO_S)
+    for i in range(500):
+        guardia._anotar_fallo(f"10.9.{i // 250}.{i % 250}")
+    assert guardia.retraso() == seguridad.RETRASO_MAX_S                    # creciente, pero con tope
+    assert guardia.bloqueado("198.51.100.20") == 0
+    assert guardia.entrar(CONTRASENA, codigo(reloj), "198.51.100.20")     # con las buenas se entra
+    reloj.t += seguridad.VENTANA_GLOBAL_S + 1
+    assert guardia.retraso() == 0                                         # pasada la ventana, sin freno
+
+
+def test_limpia_las_ip_caducadas(guardia, reloj):
+    for _ in range(seguridad.MAX_FALLOS):
+        guardia.entrar("mala", "123456", "1.1.1.1")                       # bloqueada
+    guardia._anotar_fallo("2.2.2.2")                                      # un fallo suelto
+    assert set(guardia.por_ip) == {"1.1.1.1", "2.2.2.2"}
+    reloj.t += seguridad.BLOQUEO_S + 1
+    guardia.limpiar(forzar=True)
+    assert guardia.por_ip == {}
+
+
+def test_el_registro_de_ip_tiene_tope(guardia, reloj, monkeypatch):
+    monkeypatch.setattr(seguridad, "MAX_IPS", 100)
+    for i in range(250):
+        reloj.t += 0.01
+        guardia._anotar_fallo(f"10.1.{i // 250}.{i % 250}")
+    assert len(guardia.por_ip) == 100
+    assert "10.1.0.249" in guardia.por_ip and "10.1.0.0" not in guardia.por_ip   # se van las más antiguas
+
+
+def test_los_logs_registran_la_ip_pero_no_las_credenciales(guardia, reloj, caplog):
+    with caplog.at_level("WARNING", logger="farmaclaw-web"):
+        for _ in range(seguridad.MAX_FALLOS):
+            guardia.entrar("contrasena-secreta-xyz", "654321", "203.0.113.7")
+    texto = caplog.text
+    assert "203.0.113.7" in texto and "bloqueada" in texto
+    assert "contrasena-secreta-xyz" not in texto and "654321" not in texto
 
 
 def test_sesion_caduca_por_inactividad_y_por_duracion(guardia, reloj):
@@ -192,3 +251,39 @@ def test_titulo_para_recientes():
     assert web.titulo_de("lactancia", " paracetamol ") == "Lactancia: paracetamol"
     assert web.titulo_de("libre", "¿Dosis de\n amoxicilina?") == "¿Dosis de amoxicilina?"
     assert len(web.titulo_de("libre", "x" * 300)) == 70
+
+
+def _peticion(conexion: str, xff: list[str] | None = None):
+    from starlette.requests import Request
+    cabeceras = [(b"x-forwarded-for", v.encode()) for v in (xff or [])]
+    return Request({"type": "http", "method": "POST", "path": "/", "headers": cabeceras,
+                    "client": (conexion, 50000), "query_string": b""})
+
+
+def test_ip_cliente_solo_acepta_la_cabecera_desde_127_0_0_1():
+    assert web.ip_cliente(_peticion("127.0.0.1", ["89.6.174.97"])) == "89.6.174.97"
+    assert web.ip_cliente(_peticion("203.0.113.7", ["1.2.3.4"])) == "203.0.113.7"    # cabecera ignorada
+    assert web.ip_cliente(_peticion("127.0.0.1")) == "127.0.0.1"                      # sin cabecera
+
+
+def test_ip_cliente_usa_la_ultima_ip_de_la_cabecera():
+    # Las primeras las puede escribir el cliente; la última la añade el proxy de confianza.
+    assert web.ip_cliente(_peticion("127.0.0.1", ["1.2.3.4, 5.6.7.8, 89.6.174.97"])) == "89.6.174.97"
+    assert web.ip_cliente(_peticion("127.0.0.1", ["1.2.3.4", "89.6.174.97"])) == "89.6.174.97"
+    assert web.ip_cliente(_peticion("127.0.0.1", ["no-es-una-ip"])) == "127.0.0.1"
+
+
+def test_api_frena_los_fallos_pero_no_los_aciertos(cliente, guardia, reloj, monkeypatch):
+    esperas = []
+
+    async def dormir(s):
+        esperas.append(s)
+
+    monkeypatch.setattr(web.asyncio, "sleep", dormir)
+    for i in range(seguridad.UMBRAL_GLOBAL + 10):
+        guardia._anotar_fallo(f"10.2.0.{i}")
+    assert cliente.post("/api/entrar", json={"contrasena": "mala", "codigo": "123456"}, headers=H).status_code == 401
+    assert esperas and esperas[-1] > 0
+    esperas.clear()
+    r = cliente.post("/api/entrar", json={"contrasena": CONTRASENA, "codigo": codigo(reloj)}, headers=H)
+    assert r.status_code == 200 and not esperas
