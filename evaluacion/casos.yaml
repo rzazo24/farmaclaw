@@ -379,14 +379,14 @@ casos:
       - criterio: Se debe usar la dosis eficaz más baja durante el menor tiempo necesario.
         cita: Se debe utilizar la dosis eficaz más baja durante el menor tiempo necesario para aliviar los síntomas (ver sección 4.4).
         fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
-      - criterio: Para dosificar con exactitud, los envases incluyen una jeringa oral graduada de 5 ml.
+      - criterio: Indica que se dosifique con el dispositivo (jeringa) que incluye el envase, según la ficha que lee
         cita: Para una dosificación exacta, los envases contienen una jeringa oral graduada de 5 ml.
         fuente: https://cima.aemps.es/cima/dochtml/ft/65956/FT_65956.html
     no_debe:
       - "Confundir las concentraciones de 20 y 40 mg/ml"
       - "Superar la dosis máxima diaria"
     anclado: '2026-11-21'
-    revisado_fecha: '2026-11-21'
+    revisado_fecha: '2026-11-23'
     revisado: true
 
   - id: pos-paracetamol-45kg
