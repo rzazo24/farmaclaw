@@ -409,3 +409,14 @@ def test_derivacion_comprueba_que_remite_al_medico():
     assert ok("Conviene que lo valore su médico [CIMA: X, sección 4.8](https://cima.aemps.es/x)")
     assert ok("Hay que derivarlo al pediatra.")
     assert not ok("Puede tomar ibuprofeno y esperar.")
+
+
+def test_modelo_del_agente_en_el_comando_y_en_el_analisis():
+    assert ev.comando_agente("hola")[-1] == "hola" and "--model" not in ev.comando_agente("hola")
+    cmd = ev.comando_agente("hola", "sonnet")
+    assert cmd[cmd.index("--model") + 1] == "sonnet" and cmd[-1] == "hola"
+    salida = "\n".join(json.dumps(e) for e in [
+        {"type": "assistant", "message": {"model": "claude-sonnet-5-5", "content": []}},
+        {"type": "assistant", "parent_tool_use_id": "t1", "message": {"model": "claude-sonnet-5-5", "content": []}},
+        {"type": "result", "result": "ok", "total_cost_usd": 0.1}])
+    assert ev.analizar(salida)["modelos"] == ["claude-sonnet-5-5"]

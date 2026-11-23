@@ -73,14 +73,20 @@ ENLACE = re.compile(r"\]\((https?://[^)\s]+)\)")
 
 # ───────────────────────── Ejecución ─────────────────────────
 
-def lanzar(caso: dict, carpeta: Path) -> dict:
+def comando_agente(prompt: str, modelo: str | None = None) -> list[str]:
+    """claude -p para un caso. Con modelo (p. ej. "sonnet"), el agente principal usa ese modelo y el
+    subagente research lo hereda (no fija modelo en su definición)."""
+    return COMANDO + (["--model", modelo] if modelo else []) + [prompt]
+
+
+def lanzar(caso: dict, carpeta: Path, modelo: str | None = None) -> dict:
     pregunta = caso["pregunta"].strip()
     # Los comandos rápidos ya delegan en research; las preguntas libres lo piden explícitamente.
     prompt = pregunta if pregunta.startswith("/") else f"Usa el agente research: {pregunta}"
     crudo = carpeta / f"{caso['id']}.jsonl"
     inicio = time.monotonic()
     try:
-        proc = subprocess.run(COMANDO + [prompt], cwd=RAIZ, capture_output=True, text=True, timeout=TIMEOUT_CASO,
+        proc = subprocess.run(comando_agente(prompt, modelo), cwd=RAIZ, capture_output=True, text=True, timeout=TIMEOUT_CASO,
                               stdin=subprocess.DEVNULL, env=entorno_claude())
         salida, error = proc.stdout, proc.stderr.strip()
     except subprocess.TimeoutExpired as e:
@@ -92,13 +98,15 @@ def lanzar(caso: dict, carpeta: Path) -> dict:
 def analizar(salida: str) -> dict:
     """Extrae del stream-json la respuesta final y todas las llamadas a herramientas (incluidas las del subagente)."""
     llamadas: dict[str, dict] = {}
-    respuesta, coste, subagentes = "", None, []
+    respuesta, coste, subagentes, modelos = "", None, [], set()
     for linea in salida.splitlines():
         try:
             ev = json.loads(linea)
         except json.JSONDecodeError:
             continue
         tipo = ev.get("type")
+        if tipo == "assistant" and ev.get("message", {}).get("model"):
+            modelos.add(ev["message"]["model"])
         contenido = ev.get("message", {}).get("content") if tipo in ("assistant", "user") else None
         for bloque in contenido if isinstance(contenido, list) else []:
             if bloque.get("type") == "tool_use":
@@ -117,7 +125,8 @@ def analizar(salida: str) -> dict:
         if tipo == "result":
             respuesta = ev.get("result") or "\n".join(ev.get("errors", []))
             coste = ev.get("total_cost_usd")
-    return {"respuesta": respuesta, "llamadas": list(llamadas.values()), "subagentes": subagentes, "coste_usd": coste}
+    return {"respuesta": respuesta, "llamadas": list(llamadas.values()), "subagentes": subagentes, "coste_usd": coste,
+            "modelos": sorted(modelos)}
 
 
 # ───────────────────────── Comprobaciones automáticas ─────────────────────────
@@ -452,6 +461,7 @@ def informe(carpeta: Path, resultados: list[dict], commit: str, comparar: Path |
         f"# Evaluación del agente research: {carpeta.name}",
         "",
         f"- Commit: `{commit}`",
+        f"- Modelo del agente: {', '.join(sorted({m for r in resultados for m in r.get('modelos') or []})) or 'no registrado'}",
         f"- Casos: {len(resultados)} · Comprobaciones automáticas: {ok}/{total} ✅",
         f"- Duración total: {duracion / 60:.1f} min · Coste (agente + juez): {coste:.2f} USD",
         f"- Comparado con: {', '.join(sorted(bases)) or 'nada (primera ejecución de estos casos)'}",
@@ -624,6 +634,8 @@ def main():
                    help="da por bueno un criterio dudoso/incumplido para que no vuelva a salir")
     p.add_argument("--sin-juez", action="store_true", help="solo las comprobaciones automáticas")
     p.add_argument("--modelo-juez", default="sonnet", help="modelo del juez (por defecto: sonnet)")
+    p.add_argument("--modelo-agente", metavar="MODELO",
+                   help="modelo del agente (p. ej. sonnet; por defecto, el de la cuenta). Para comparar modelos")
     p.add_argument("--segunda-opinion", default="opus", metavar="MODELO",
                    help="modelo que vuelve a juzgar los dudosos (por defecto: opus; 'no' para desactivar)")
     p.add_argument("--comparar", type=Path, metavar="CARPETA",
@@ -663,7 +675,7 @@ def main():
     # Secuencial a propósito: no saturar CIMA, NCBI ni e-lactancia.
     for i, caso in enumerate(casos, 1):
         print(f"[{i}/{len(casos)}] {caso['id']} …", end=" ", flush=True)
-        r = lanzar(caso, carpeta)
+        r = lanzar(caso, carpeta, args.modelo_agente)
         r.update(id=caso["id"], categoria=caso["categoria"], caso=caso)
         r["comprobaciones"] = comprobar(caso, r)
         r["juez"] = None if args.sin_juez else juzgar(caso, r["respuesta"], args.modelo_juez, segunda)
