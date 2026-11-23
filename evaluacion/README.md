@@ -59,7 +59,7 @@ anclado: '2026-11-21'
 - La lista del test rápido está en `rapido:` al principio de `casos.yaml`.
 - Requiere tener aprobados los servidores MCP del proyecto (ver el README principal).
 
-Categorías: `interaccion`, `lactancia`, `embarazo`, `posologia`, `contraindicacion`, `suministro`, `reacciones_adversas`, `sin_evidencia`.
+Categorías: `interaccion`, `lactancia`, `embarazo`, `posologia`, `contraindicacion`, `suministro`, `reacciones_adversas`, `derivacion` (dudas de diagnóstico y cuándo derivar: el agente no diagnostica) y `sin_evidencia`. `ejecutar.py` rechaza un `casos.yaml` con una categoría que no esté en esta lista (`CATEGORIAS`).
 
 ## Qué genera
 
@@ -91,11 +91,12 @@ claude -p "<prompt>" --output-format stream-json --verbose \
 | Comprobación | Cuándo |
 |---|---|
 | Delegó en el agente research | Siempre |
-| Consultó las herramientas de `debe_consultar` (y la sección y el nº mínimo de veces, si se indican) | Si el caso lo define |
+| Consultó las herramientas de `debe_consultar` (y la sección, los `tipos` de búsqueda —p. ej. guías: `Practice Guideline`/`Guideline`— y el nº mínimo de veces, si se indican) | Si el caso lo define |
 | Al menos una cita `[CIMA:…]`, `[PMID:…]`, `[LactMed:…]` o `[e-lactancia:…]` con enlace | Salvo en `sin_evidencia` |
 | Todos los enlaces de la respuesta aparecen en los resultados de las herramientas de esa ejecución (detecta **citas inventadas**; un PMID cuenta si lo devolvió alguna herramienta, p. ej. LactMed) | Siempre |
 | Aviso de Bot PLUS | `interaccion` |
 | Dice que no hay evidencia | `sin_evidencia` |
+| Remite al médico o al pediatra (que no diagnostique ni recete lo valora el juez, no se puede comprobar a máquina) | `derivacion` |
 | No repite los textos de `no_debe_aparecer` | Si el caso lo define (p. ej. datos de pacientes) |
 
 Las comprobaciones tienen sus propias pruebas en `tests/test_evaluacion.py`.

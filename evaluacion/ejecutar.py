@@ -127,9 +127,21 @@ def _seccion(s: str) -> str:
     return _cima.ALIAS_FICHA.get(s) or _cima.ALIAS_PROSPECTO.get(s) or s
 
 
+CATEGORIAS = ("interaccion", "lactancia", "embarazo", "posologia", "contraindicacion", "suministro",
+              "reacciones_adversas", "derivacion", "sin_evidencia")
+
+
+def categorias_desconocidas(casos: list[dict]) -> list[str]:
+    return sorted({c["categoria"] for c in casos} - set(CATEGORIAS))
+
+
 def _cumple(llamada: dict, req: dict) -> bool:
     if not llamada["herramienta"].endswith("__" + req["herramienta"]):
         return False
+    if "tipos" in req:  # p. ej. buscar_articulos con tipos de guía: basta con que pida uno de ellos
+        pedidos = {str(t).strip().lower() for t in llamada["entrada"].get("tipos") or []}
+        if not pedidos & {str(t).lower() for t in req["tipos"]}:
+            return False
     if "seccion" in req:
         pedida = _seccion(llamada["entrada"].get("seccion", ""))
         return any(pedida == s or pedida.startswith(s + ".") for s in _secciones(req))
@@ -172,7 +184,8 @@ def comprobar(caso: dict, r: dict) -> list[dict]:
     for req in caso.get("debe_consultar", []):
         minimo = req.get("minimo", 1)
         n = sum(_cumple(l, req) for l in llamadas)
-        etiqueta = req["herramienta"] + (f" {' o '.join(_secciones(req))}" if "seccion" in req else "")
+        etiqueta = req["herramienta"] + (f" {' o '.join(_secciones(req))}" if "seccion" in req else "") \
+            + (f" (tipos: {' o '.join(req['tipos'])})" if "tipos" in req else "")
         anotar(f"Consultó {etiqueta} (≥{minimo})", n >= minimo, f"{n} llamada(s)")
 
     citas = CITA.findall(texto)
@@ -188,6 +201,11 @@ def comprobar(caso: dict, r: dict) -> list[dict]:
 
     if caso["categoria"] == "interaccion":
         anotar("Aviso de Bot PLUS", "bot plus" in texto.lower())
+
+    if caso["categoria"] == "derivacion":
+        # Lo único comprobable a máquina: que remita al médico. Que no diagnostique lo valora el juez.
+        anotar("Remite al médico o al pediatra",
+               bool(re.search(r"\b(m[ée]dic[oa]s?|pediatra|derivar|der[ií]va(lo|la|r)?|consult(ar|e) al)\b", texto, re.I)))
 
     if caso["categoria"] == "sin_evidencia":
         anotar("Dice que no hay evidencia", bool(re.search(r"no he encontrado (evidencia|ning)|no (existe|figura|consta)", texto, re.I)))
@@ -621,6 +639,8 @@ def main():
     segunda = None if args.segunda_opinion.lower() == "no" else args.segunda_opinion
     datos = yaml.safe_load(args.casos.read_text())
     casos = datos["casos"]
+    if desconocidas := categorias_desconocidas(casos):
+        sys.exit(f"Categoría(s) desconocida(s) en {args.casos}: {', '.join(desconocidas)}. Válidas: {', '.join(CATEGORIAS)}")
     if args.solo_juez:
         return solo_juez(args.solo_juez, casos, args.modelo_juez, segunda, args.comparar)
     if args.rapido:

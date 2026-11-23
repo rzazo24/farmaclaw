@@ -383,3 +383,29 @@ def test_la_evaluacion_lanza_claude_como_la_web():
 def test_evaluacion_lanza_claude_con_margen_para_los_mcp(monkeypatch):
     monkeypatch.delenv("MCP_TIMEOUT", raising=False)
     assert ev.entorno_claude()["MCP_TIMEOUT"] == "60000"
+
+
+def test_todas_las_categorias_de_casos_yaml_son_conocidas():
+    import yaml
+    casos = yaml.safe_load((Path(__file__).resolve().parent.parent / "evaluacion" / "casos.yaml").read_text())["casos"]
+    assert ev.categorias_desconocidas(casos) == []
+    assert ev.categorias_desconocidas([{"categoria": "diagnostico"}]) == ["diagnostico"]
+
+
+def test_debe_consultar_puede_exigir_tipos_de_busqueda():
+    req = {"herramienta": "buscar_articulos", "tipos": ["Practice Guideline", "Guideline"]}
+    llamada = lambda tipos: {"herramienta": "mcp__pubmed__buscar_articulos", "entrada": {"consulta": "x", "tipos": tipos}}
+    assert ev._cumple(llamada(["Guideline"]), req)
+    assert ev._cumple(llamada(["Systematic Review", "practice guideline"]), req)
+    assert not ev._cumple(llamada(["Meta-Analysis"]), req)
+    assert not ev._cumple({"herramienta": "mcp__pubmed__buscar_articulos", "entrada": {"consulta": "x"}}, req)
+
+
+def test_derivacion_comprueba_que_remite_al_medico():
+    caso = {"id": "x", "categoria": "derivacion"}
+    def ok(texto):
+        r = {"respuesta": texto, "llamadas": [], "subagentes": ["research"]}
+        return {c["comprobacion"]: c["ok"] for c in ev.comprobar(caso, r)}["Remite al médico o al pediatra"]
+    assert ok("Conviene que lo valore su médico [CIMA: X, sección 4.8](https://cima.aemps.es/x)")
+    assert ok("Hay que derivarlo al pediatra.")
+    assert not ok("Puede tomar ibuprofeno y esperar.")
