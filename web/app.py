@@ -64,6 +64,17 @@ def entorno_claude() -> dict:
     return entorno
 
 
+# Modo rápido: Sonnet en lugar del modelo por defecto (Opus). Medido con la evaluación (7 casos):
+# la mitad de coste y de tiempo, pero una vez se saltó leer la segunda parte de una sección.
+# Para consultas sencillas; para interacciones, derivación o evidencia, el modo normal.
+MODELO_RAPIDO = "sonnet"
+
+
+def comando_claude(prompt: str, rapido: bool = False) -> list[str]:
+    """claude -p para una consulta; en modo rápido, el agente principal y research usan Sonnet."""
+    return CLAUDE + (["--model", MODELO_RAPIDO] if rapido else []) + [prompt]
+
+
 NOMBRES = {"cima": "CIMA", "pubmed": "PubMed", "elactancia": "e-lactancia", "calculos": "Cálculo"}
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(asctime)s %(levelname)s %(message)s")
@@ -164,24 +175,24 @@ class Consultas:
         self.trabajos: dict[str, dict] = {}
         self.en_curso: str | None = None
 
-    def nueva(self, prompt: str, titulo: str = "") -> str:
+    def nueva(self, prompt: str, titulo: str = "", rapido: bool = False) -> str:
         if self.en_curso:
             raise HTTPException(409, "Ya hay una consulta en marcha; espera a que termine.")
         ident = secrets.token_urlsafe(8)
         self.trabajos[ident] = {"estado": "en_curso", "pasos": [], "html": "", "inicio": time.time(), "duracion": None,
-                                "titulo": titulo or prompt[:80]}
+                                "titulo": titulo or prompt[:80], "rapido": rapido}
         for viejo in list(self.trabajos)[:-20]:  # guarda solo las 20 últimas
             self.trabajos.pop(viejo)
         self.en_curso = ident
-        asyncio.get_running_loop().create_task(self._ejecutar(ident, prompt))
+        asyncio.get_running_loop().create_task(self._ejecutar(ident, prompt, rapido))
         return ident
 
-    async def _ejecutar(self, ident: str, prompt: str):
+    async def _ejecutar(self, ident: str, prompt: str, rapido: bool = False):
         t = self.trabajos[ident]
         respuesta, error = "", ""
         try:
             proc = await asyncio.create_subprocess_exec(
-                *CLAUDE, prompt, cwd=RAIZ, stdin=asyncio.subprocess.DEVNULL, env=entorno_claude(),
+                *comando_claude(prompt, rapido), cwd=RAIZ, stdin=asyncio.subprocess.DEVNULL, env=entorno_claude(),
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=16 * 1024 * 1024)
             try:
                 async with asyncio.timeout(TIMEOUT_S):
@@ -332,17 +343,21 @@ def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None,
         exigir_sesion(request)
         datos = await request.json()
         comando, texto = str(datos.get("comando", "libre")), str(datos.get("texto", ""))
+        rapido = datos.get("rapido", False)
+        if not isinstance(rapido, bool):
+            raise HTTPException(400, "«rapido» tiene que ser verdadero o falso.")
         if comando not in COMANDOS:
             raise HTTPException(400, "Comando desconocido.")
         if not texto.strip().lstrip("/").strip():
             raise HTTPException(400, "Escribe la consulta.")
-        return {"id": consultas.nueva(construir_prompt(comando, texto), titulo_de(comando, texto))}
+        return {"id": consultas.nueva(construir_prompt(comando, texto), titulo_de(comando, texto), rapido)}
 
     @app.get("/api/consultas")
     def recientes(request: Request):
         """Consultas de esta sesión del servidor (solo en memoria; se borran al reiniciar), la más nueva primero."""
         exigir_sesion(request)
-        return [{"id": i, "titulo": t.get("titulo", ""), "estado": t["estado"], "inicio": t["inicio"]}
+        return [{"id": i, "titulo": t.get("titulo", ""), "estado": t["estado"], "inicio": t["inicio"],
+                 "rapido": t.get("rapido", False)}
                 for i, t in reversed(consultas.trabajos.items())]
 
     @app.get("/api/consulta/{ident}")
@@ -351,7 +366,7 @@ def crear_app(guardia: seguridad.Guardia, consultas: Consultas | None = None,
         t = consultas.trabajos.get(ident)
         if not t:
             raise HTTPException(404, "Consulta no encontrada.")
-        return {k: t.get(k) for k in ("estado", "pasos", "html", "duracion", "error", "titulo")} | {
+        return {k: t.get(k) for k in ("estado", "pasos", "html", "duracion", "error", "titulo", "rapido")} | {
             "segundos": round(time.time() - t["inicio"])}
 
     return app

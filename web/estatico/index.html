@@ -110,6 +110,11 @@
       <h2 class="seccion">Consulta</h2>
       <div class="tarjeta">
         <textarea id="texto" rows="3" maxlength="2000" required aria-label="Consulta"></textarea>
+        <label class="interruptor" title="Usa Sonnet: gasta la mitad y tarda la mitad">
+          <input type="checkbox" id="rapido">
+          <span class="pista" aria-hidden="true"></span>
+          <span class="texto-interruptor"><b>Modo rápido</b> · gasta y tarda la mitad. Para consultas sencillas (una dosis, una lactancia); para interacciones, derivación o estudios, mejor el normal.</span>
+        </label>
         <div class="pie-consulta">
           <p class="aviso">No escribas datos que identifiquen a pacientes.</p>
           <button id="enviar" type="submit" class="principal">Consultar</button>
@@ -188,6 +193,13 @@
       <li>Si no encuentra información, lo dice: <b>«No he encontrado evidencia»</b>, y explica qué ha buscado.</li>
       <li>En interacciones, <b>contrasta siempre con Bot PLUS</b>.</li>
     </ul>
+
+    <h3>Modo rápido</h3>
+    <p>Debajo del cuadro de consulta puedes activar el <b>modo rápido</b>: usa un modelo más ligero (Sonnet) en lugar del
+      habitual (Opus). En nuestras pruebas gastó la mitad de la suscripción y tardó la mitad, con respuestas igual de bien
+      citadas, pero una vez dejó sin leer la segunda parte de una sección de la ficha. Úsalo para consultas sencillas
+      (una dosis, la lactancia de un fármaco conocido) y deja el modo normal para interacciones, derivación o búsqueda de
+      estudios. Las consultas hechas en modo rápido llevan el símbolo ⚡.</p>
 
     <h3>Recientes</h3>
     <p>En el PC, el menú lateral guarda las consultas de esta sesión: púlsalas para volver a ver la respuesta sin repetir la búsqueda.

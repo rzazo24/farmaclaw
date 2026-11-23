@@ -121,7 +121,7 @@ $("formulario").addEventListener("submit", async (e) => {
   limpiar();
   $("enviar").disabled = true;
   try {
-    const { id } = await api("/api/consulta", { comando: comando(), texto: $("texto").value });
+    const { id } = await api("/api/consulta", { comando: comando(), texto: $("texto").value, rapido: $("rapido").checked });
     cargarRecientes();
     await ver(id);
   } catch (err) {
@@ -144,13 +144,13 @@ async function ver(id) {
     if (viendo !== id) return;  // el usuario ha pasado a otra
     $("pasos").replaceChildren(...t.pasos.map((p) => { const li = document.createElement("li"); li.textContent = p; return li; }));
     if (t.estado === "en_curso") {
-      $("estado").textContent = `Buscando en las fuentes · ${t.segundos} s`;
+      $("estado").textContent = `Buscando en las fuentes${t.rapido ? " (modo rápido)" : ""} · ${t.segundos} s`;
       await new Promise((r) => setTimeout(r, 2000));
       continue;
     }
     $("estado").textContent = `Fuentes consultadas · ${t.duracion} s`;
     $("estado").classList.add("hecho");
-    $("titulo-respuesta").textContent = t.titulo || "Respuesta";
+    $("titulo-respuesta").textContent = (t.rapido ? "⚡ " : "") + (t.titulo || "Respuesta");
     $("titulo-respuesta").hidden = false;
     if (t.error) $("error-consulta").textContent = t.error;
     // El HTML lo genera el servidor con markdown-it sin HTML crudo (escapado), así que es seguro insertarlo.
@@ -171,7 +171,7 @@ async function cargarRecientes() {
     const li = document.createElement("li");
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = c.titulo || "Consulta";
+    b.textContent = (c.rapido ? "⚡ " : "") + (c.titulo || "Consulta");
     b.title = c.titulo || "";
     b.dataset.id = c.id;
     if (c.estado === "en_curso") b.classList.add("en-curso");

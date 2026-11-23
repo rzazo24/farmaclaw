@@ -205,8 +205,9 @@ class ConsultasFalsas:
     def __init__(self):
         self.trabajos, self.prompts = {}, []
 
-    def nueva(self, prompt, titulo=""):
+    def nueva(self, prompt, titulo="", rapido=False):
         self.prompts.append(prompt)
+        self.rapidos = getattr(self, "rapidos", []) + [rapido]
         self.trabajos["x1"] = {"estado": "hecha", "pasos": [], "html": "<p>ok</p>", "inicio": 0, "duracion": 1,
                                "titulo": titulo}
         return "x1"
@@ -241,7 +242,7 @@ def test_api_flujo_completo(cliente, reloj):
     assert cliente.falsas.prompts == ["/dosis ibuprofeno niño 15 kg"]
     assert cliente.get("/api/consulta/x1").json()["html"] == "<p>ok</p>"
     assert cliente.get("/api/consultas").json()[0] | {"inicio": 0} == {
-        "id": "x1", "titulo": "Dosis: ibuprofeno niño 15 kg", "estado": "hecha", "inicio": 0}
+        "id": "x1", "titulo": "Dosis: ibuprofeno niño 15 kg", "estado": "hecha", "inicio": 0, "rapido": False}
     assert cliente.post("/api/salir", json={}, headers=H).status_code == 200
     assert cliente.get("/api/consulta/x1").status_code == 401
 
@@ -456,3 +457,19 @@ def test_aviso_si_algun_servidor_mcp_no_ha_conectado(caplog):
 
 def test_los_servidores_esperados_son_los_de_mcp_json():
     assert set(web.SERVIDORES_MCP) == {"cima", "pubmed", "elactancia", "calculos"}
+
+
+def test_modo_rapido_usa_sonnet_y_el_normal_no():
+    assert "--model" not in web.comando_claude("hola")
+    cmd = web.comando_claude("hola", rapido=True)
+    assert cmd[cmd.index("--model") + 1] == "sonnet" and cmd[-1] == "hola"
+    assert "--strict-mcp-config" in cmd                                   # el resto de opciones se mantiene
+
+
+def test_api_pasa_el_modo_rapido(cliente, reloj):
+    assert cliente.post("/api/entrar", json={"contrasena": CONTRASENA, "codigo": codigo(reloj)}, headers=H).status_code == 200
+    assert cliente.post("/api/consulta", json={"comando": "lactancia", "texto": "paracetamol", "rapido": True},
+                        headers=H).status_code == 200
+    assert cliente.post("/api/consulta", json={"comando": "lactancia", "texto": "paracetamol"}, headers=H).status_code == 200
+    assert cliente.falsas.rapidos == [True, False]
+    assert cliente.post("/api/consulta", json={"comando": "libre", "texto": "x", "rapido": "sí"}, headers=H).status_code == 400

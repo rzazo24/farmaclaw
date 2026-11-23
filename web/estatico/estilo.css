@@ -226,3 +226,16 @@ html, .lateral, .ayuda-cuerpo, textarea, #respuesta table {
 .aviso-inactividad b { color: var(--ambar); }
 .aviso-inactividad button { padding: 8px 18px; }
 @media (min-width: 900px) { .aviso-inactividad { bottom: 24px; } }
+
+/* Interruptor del modo rápido */
+.interruptor { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; cursor: pointer;
+  font-weight: 400; font-size: .85rem; color: var(--suave); }
+.interruptor input { position: absolute; opacity: 0; pointer-events: none; }
+.interruptor .pista { position: relative; width: 44px; height: 26px; flex: none; border-radius: 999px;
+  background: var(--borde); transition: background .15s; }
+.interruptor .pista::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--tarjeta); box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .15s; }
+.interruptor input:checked + .pista { background: var(--ambar); }
+.interruptor input:checked + .pista::after { transform: translateX(18px); }
+.interruptor input:focus-visible + .pista { outline: 2px solid var(--ambar); outline-offset: 2px; }
+.interruptor b { color: var(--texto); }
