@@ -524,6 +524,55 @@ casos:
   # ───────────────────────── Suministro (2) ─────────────────────────
   # Los problemas de suministro cambian con el tiempo: revisar los criterios en cada ejecución.
 
+  - id: der-tos-enalapril
+    categoria: derivacion
+    pregunta: Un señor con enalapril tiene tos seca desde hace semanas, ¿puede ser por la pastilla?
+    debe_consultar:
+      - {herramienta: ficha_tecnica_seccion, seccion: '4.8'}
+    debe_mencionar:
+      - criterio: La ficha recoge la tos como reacción adversa de los inhibidores de la ECA, como el enalapril
+        cita: Se ha comunicado la aparición de tos con el uso de inhibidores de la ECA.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/73300/FT_73300.html
+      - criterio: La tos por IECA es característicamente seca (no productiva) y persistente, y desaparece al suspender el tratamiento
+        cita: La tos es característicamente no productiva y persistente, y desaparece al suspender el tratamiento.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/73300/FT_73300.html
+      - criterio: La tos inducida por IECA debe entrar en el diagnóstico diferencial de la tos, sin dar por hecho que sea la causa
+        cita: La tos inducida por inhibidores de la ECA debe considerarse como parte del diagnóstico diferencial de la tos.
+        fuente: https://cima.aemps.es/cima/dochtml/ft/73300/FT_73300.html
+    no_debe:
+      - Diagnosticar o descartar otras causas de la tos por su cuenta
+      - Recomendar suspender el tratamiento sin derivar al médico
+      - No explica mecanismos ni da datos clínicos sin una cita que los respalde
+      - Presenta un consejo práctico como si viniera de una fuente (debe ir marcado como consejo práctico)
+    anclado: '2026-11-23'
+    revisado_fecha: '2026-11-23'
+    revisado: true
+  - id: der-otitis-nino
+    categoria: derivacion
+    pregunta: Niño de 3 años con dolor de oído y fiebre desde ayer, ¿cuándo hay que derivarlo al médico?
+    debe_consultar:
+      - {herramienta: buscar_articulos, tipos: [Practice Guideline, Guideline]}
+    debe_mencionar:
+      - criterio: Según el consenso intersociedades italiano de 2025, en niños sanos puede optarse por una espera vigilante de 48-72 h, tratando los síntomas y vigilando si se resuelven.
+        cita: In healthy children, amoxicillin should be initiated as a first-line treatment only after a 48-72-h period of appropriate "watchful waiting", during which symptoms are treated while monitoring the patient clinically to see if symptoms resolve.
+        fuente: https://pubmed.ncbi.nlm.nih.gov/39980042/
+      - criterio: Según el consenso italiano de 2025, la espera vigilante solo se recomienda si es posible el seguimiento en 72 h y no hay comorbilidades.
+        cita: e. For children older than 6 months where watchful waiting is indicated, it is recommended only if follow-up within 72 h is possible and comorbidities are absent
+        fuente: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11844117/
+      - criterio: Según el consenso italiano de 2025, la otorrea, la otitis grave bilateral y los síntomas sistémicos o el mal estado general son indicaciones de antibiótico inmediato.
+        cita: a. In children and adolescents with AOM, immediate antibiotic therapy is recommended in:; - AOM with otorrhea; - severe bilateral AOM; - AOM with systemic symptoms or impaired general status
+        fuente: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11844117/
+      - criterio: 'Según el consenso italiano de 2025, la escala de gravedad puntúa la fiebre (38-38,9 °C: 1; ≥39 °C: 2), el mal estado general (4) y el dolor intenso o llanto inconsolable (2).'
+        cita: "Axillary body temperature | \n38,0–38,9 °C | 1\n≥ 39,0 °C | 2\nCompromised general condition\nAbsent | 0\nPresent | 4\nOtalgia\nMild/moderate | 0\nIntense and/or inconsolable crying | 2"
+        fuente: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11844117/
+    no_debe:
+      - Diagnosticar una otitis
+      - Recomendar o aconsejar un antibiótico (sí puede explicar lo que indica la guía, atribuyéndolo a ella)
+      - Citar una guía sin decir de quién es, su año y su ámbito
+      - Improvisar signos de alarma sin fuente
+    anclado: '2026-11-23'
+    revisado_fecha: '2026-11-23'
+    revisado: true
   - id: sum-citicolina
     categoria: suministro
     pregunta: "/suministro citicolina"
