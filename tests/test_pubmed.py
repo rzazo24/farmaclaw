@@ -68,6 +68,18 @@ def test_tipo_invalido_falla_sin_llamar_a_la_api():
         s.buscar_articulos("aspirin", tipos=["Blog"])
 
 
+def test_filtro_de_guias_de_practica_clinica(monkeypatch):
+    pedidos = []
+
+    def get_falso(utilidad, params, json_=True):
+        pedidos.append(params["term"])
+        return {"esearchresult": {"idlist": []}}
+    monkeypatch.setattr(s, "_get", get_falso)
+    with pytest.raises(ToolError):                       # sin resultados: lo importante es la consulta
+        s.buscar_articulos("otitis media", tipos=["Practice Guideline", "guideline"], desde_anio=2018)
+    assert pedidos == ['(otitis media) AND ("Practice Guideline"[pt] OR "Guideline"[pt]) AND 2018:3000[dp]']
+
+
 def test_pmids_invalidos():
     with pytest.raises(ToolError, match="PMID válido"):
         s.obtener_resumen(["abc"])
@@ -88,6 +100,14 @@ def test_buscar_con_filtros():
         assert int(a["anio"]) >= 2015
         assert {"Meta-Analysis", "Systematic Review"} & set(a["tipos"])
         assert a["fuente"] == f"https://pubmed.ncbi.nlm.nih.gov/{a['pmid']}/"
+
+
+@pytest.mark.red
+def test_buscar_guias_real():
+    r = s.buscar_articulos("acute otitis media", 5, ["Practice Guideline", "Guideline"], 2010)
+    assert r["articulos"]
+    for a in r["articulos"]:
+        assert {"Practice Guideline", "Guideline"} & set(a["tipos"])
 
 
 @pytest.mark.red

@@ -86,7 +86,8 @@ Definido en `.claude/agents/research.md`. Solo tiene acceso a las herramientas d
 
 - **Solo lo que ha leído.** Responde únicamente con información obtenida de las herramientas en esa conversación. Si no la encuentra, dice *"No he encontrado evidencia"* y explica qué buscó. Si una API falla, lo dice en vez de suponer.
 - **Una cita por afirmación clínica**, con enlace: `[CIMA: nombre, sección X]`, `[PMID: 12345678]`, `[LactMed: fármaco]`, `[e-lactancia: producto]`. No cita un artículo sin haber leído su resumen.
-- **Prioridad de fuentes:** ficha técnica de CIMA (lo autorizado en España) → metaanálisis y revisiones sistemáticas → ensayos clínicos → casos clínicos (solo como apoyo). Si la evidencia y la ficha difieren, muestra ambas.
+- **Prioridad de fuentes:** ficha técnica de CIMA (lo autorizado en España) → guías de práctica clínica, metaanálisis y revisiones sistemáticas → ensayos clínicos → casos clínicos (solo como apoyo). Si la evidencia y la ficha difieren, muestra ambas.
+- **Dudas de diagnóstico:** no diagnostica. Con fuentes, dice si un síntoma puede ser un efecto adverso (sección 4.8), cuándo derivar al médico (ficha y prospecto) y qué dicen las guías de práctica clínica de PubMed, indicando de quién son, de qué año y de qué ámbito (pueden no coincidir con la práctica en España).
 - **Interacciones:** lee la sección 4.5 de ambos fármacos; explica mecanismo, relevancia clínica y manejo práctico; termina siempre con *"No detectar una interacción aquí no garantiza que no exista; contrastar con Bot PLUS"*.
 - **Lactancia:** consulta e-lactancia, LactMed y la ficha 4.6, empezando por el nivel de riesgo de e-lactancia.
 - **Seguridad:** revisa las notas de seguridad de la AEMPS y los materiales informativos cuando existen (pueden ser más recientes que la ficha).
@@ -112,7 +113,7 @@ Las secciones de más de 8.000 caracteres se devuelven **por partes** (`parte=1,
 ### `pubmed`: PubMed y LactMed (NCBI)
 | Herramienta | Qué hace | Detalles |
 |---|---|---|
-| `buscar_articulos` | Búsqueda en PubMed por relevancia | Filtros opcionales: tipo (`Meta-Analysis`, `Systematic Review`, `Randomized Controlled Trial`, `Review`, `Case Reports`) y año mínimo. Devuelve la consulta exacta usada, para repetirla en la web |
+| `buscar_articulos` | Búsqueda en PubMed por relevancia | Filtros opcionales: tipo (`Meta-Analysis`, `Systematic Review`, `Randomized Controlled Trial`, `Review`, `Case Reports` y, para **guías de práctica clínica**, `Practice Guideline` y `Guideline`) y año mínimo. Devuelve la consulta exacta usada, para repetirla en la web |
 | `obtener_resumen` | Abstract y metadatos (hasta 10 PMIDs) | Autores abreviados, revista, año, abstract por apartados, MeSH, DOI y enlace al texto completo en PMC si existe |
 | `texto_completo` | Texto completo de copias legales de acceso abierto | Por PMID, PMCID o DOI. Busca en orden en **PubMed Central**, **Europe PMC** (incluye preprints) y **Unpaywall** (PDF abiertos de la editorial o de repositorios). Primero un índice (origen y versión, secciones, tablas, licencia); luego cada sección (`Methods`, `resultados`, número…), `tablas` o `declaraciones` (financiación y conflictos de interés), por partes. Sin bibliografía. De los PDF no se extraen tablas y las secciones se detectan de forma aproximada. Si no hay copia abierta, dice dónde ha buscado y remite al abstract |
 | `lactmed` | LactMed: fármacos y lactancia | Nombre en **inglés** (acepta equivalencias habituales: paracetamol → acetaminophen, salbutamol → albuterol, metamizol → dipyrone…). Secciones: `resumen` (con alternativas y clase), `niveles`, `efectos_lactante`, `efectos_lactancia`, `alternativas`. Las citas aparecen como `[PMID: …]` |

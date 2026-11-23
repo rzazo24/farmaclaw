@@ -49,6 +49,8 @@ TIPOS = {
     "randomized controlled trial": "Randomized Controlled Trial",
     "review": "Review",
     "case reports": "Case Reports",
+    "practice guideline": "Practice Guideline",   # guías de práctica clínica
+    "guideline": "Guideline",                     # guías y recomendaciones (de sociedades, organismos…)
 }
 
 mcp = FastMCP("pubmed")
@@ -115,7 +117,9 @@ def buscar_articulos(
 
     consulta: términos en inglés funcionan mejor (p. ej. "clopidogrel omeprazole").
     tipos: filtra por tipo de publicación. Valores: "Meta-Analysis",
-      "Systematic Review", "Randomized Controlled Trial", "Review", "Case Reports".
+      "Systematic Review", "Randomized Controlled Trial", "Review", "Case Reports",
+      "Practice Guideline" y "Guideline" (guías de práctica clínica: criterios diagnósticos,
+      signos de alarma, cuándo derivar). Para guías, usa los dos a la vez.
     desde_anio: solo artículos publicados desde ese año.
     Devuelve PMID, título, revista, año y tipos de publicación.
     """
