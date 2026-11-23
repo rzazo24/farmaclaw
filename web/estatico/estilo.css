@@ -84,7 +84,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .tipo { position: relative; display: flex; align-items: center; gap: 14px; margin: 0; padding: 16px;
   background: var(--tarjeta); border: 1.5px solid var(--borde); border-radius: 20px; cursor: pointer;
   color: var(--texto); font-weight: 500; font-size: 1rem; box-shadow: var(--sombra); }
-.tipo input { position: absolute; opacity: 0; pointer-events: none; }
+.tipo input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .tipo .hex { --lado: 44px; background: var(--hex-apagado); color: var(--ambar); }
 .tipo:has(input:checked) { border-color: var(--ambar); }
 .tipo:has(input:checked) .hex { background: var(--ambar); color: var(--sobre-ambar); }
@@ -228,9 +228,9 @@ html, .lateral, .ayuda-cuerpo, textarea, #respuesta table {
 @media (min-width: 900px) { .aviso-inactividad { bottom: 24px; } }
 
 /* Interruptor del modo rápido */
-.interruptor { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; cursor: pointer;
+.interruptor { position: relative; display: flex; align-items: center; gap: 12px; margin: 12px 0 0; cursor: pointer;
   font-weight: 400; font-size: .85rem; color: var(--suave); }
-.interruptor input { position: absolute; opacity: 0; pointer-events: none; }
+.interruptor input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .interruptor .pista { position: relative; width: 44px; height: 26px; flex: none; border-radius: 999px;
   background: var(--borde); transition: background .15s; }
 .interruptor .pista::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
@@ -239,3 +239,13 @@ html, .lateral, .ayuda-cuerpo, textarea, #respuesta table {
 .interruptor input:checked + .pista::after { transform: translateX(18px); }
 .interruptor input:focus-visible + .pista { outline: 2px solid var(--ambar); outline-offset: 2px; }
 .interruptor b { color: var(--texto); }
+
+/* Pantallas grandes: la zona central crece en vez de dejar márgenes enormes */
+@media (min-width: 1400px) {
+  main { max-width: 1320px; padding: 32px 56px 48px; }
+}
+@media (min-width: 1800px) {
+  main { max-width: 1560px; }
+  .tipos { grid-template-columns: repeat(6, minmax(0, 1fr)); }   /* los 6 tipos en una fila */
+  .tipo { flex-direction: column; text-align: center; gap: 10px; padding: 18px 12px; }
+}
