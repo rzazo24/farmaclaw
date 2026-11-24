@@ -128,8 +128,12 @@ def _medicamento(nregistro: str) -> dict:
     return data
 
 
-def _buscar(texto: str) -> list[dict]:
-    """Busca por código nacional o nº de registro (si son dígitos), o por nombre comercial y principio activo."""
+def _buscar(texto: str, filtros: dict | None = None) -> list[dict]:
+    """Busca por código nacional o nº de registro (si son dígitos), o por nombre comercial y principio activo.
+
+    filtros: parámetros extra de /medicamentos (comerc=1, receta=0…). Se aplican en la API porque
+    CIMA pagina los resultados y aquí solo se lee la primera página: filtrar después podría dejar
+    fuera lo buscado (p. ej. 14 omeprazoles sin receta entre 173)."""
     texto = texto.strip()
     codigo = texto.split(".")[0]  # el CN de la caja puede llevar dígito de control: "712729.8"
     if codigo.isdigit():
@@ -144,10 +148,20 @@ def _buscar(texto: str) -> list[dict]:
     # activo en el nombre ("ácido valproico") y se perderían las marcas (Depakine).
     vistos: dict[str, dict] = {}
     for campo in ("nombre", "practiv1"):
-        data = _get("/medicamentos", {campo: texto}) or {}
+        data = _get("/medicamentos", {campo: texto, **(filtros or {})}) or {}
         for m in data.get("resultados", []):
             vistos.setdefault(m["nregistro"], m)
     return list(vistos.values())
+
+
+def filtrar(medicamentos: list[dict], solo_comercializados: bool = False, solo_sin_receta: bool = False) -> list[dict]:
+    """Filtro también en Python (la búsqueda por CN o nº de registro no pasa por /medicamentos).
+    Sin receta = el campo lógico «receta» de CIMA es falso (si falta, no se da por sin receta)."""
+    if solo_comercializados:
+        medicamentos = [m for m in medicamentos if m.get("comerc")]
+    if solo_sin_receta:
+        medicamentos = [m for m in medicamentos if m.get("receta") is False]
+    return medicamentos
 
 
 def _resumen(m: dict) -> dict:
@@ -160,24 +174,33 @@ def _resumen(m: dict) -> dict:
         "notas_seguridad": m.get("notas"),
         "materiales_informativos": m.get("materialesInf"),
         "receta": m.get("cpresc"),
+        "necesita_receta": m.get("receta"),
         "fuente": WEB.format(m["nregistro"]),
     }
 
 
 @mcp.tool()
-def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: bool = False) -> dict:
+def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: bool = False,
+                       solo_sin_receta: bool = False) -> dict:
     """Busca medicamentos autorizados en España por nombre comercial, principio activo,
     código nacional (CN de la caja, p. ej. "712729") o nº de registro.
+
+    solo_sin_receta: solo medicamentos que no necesitan receta médica (indicación
+    farmacéutica, síntomas menores). Sus prospectos dicen cuándo consultar al médico.
 
     Devuelve una lista breve (máx. 15) con nregistro, nombre, laboratorio,
     si está comercializado y si tiene problemas de suministro. Usa el
     nregistro para consultar la ficha técnica o el prospecto.
     """
-    resultados = _buscar(nombre_o_principio_activo)
+    filtros = {}
     if solo_comercializados:
-        resultados = [m for m in resultados if m.get("comerc")]
+        filtros["comerc"] = 1
+    if solo_sin_receta:
+        filtros["receta"] = 0
+    resultados = filtrar(_buscar(nombre_o_principio_activo, filtros), solo_comercializados, solo_sin_receta)
     if not resultados:
-        raise ToolError(f"No se ha encontrado ningún medicamento para «{nombre_o_principio_activo}» en CIMA.")
+        detalle = " sin receta" if solo_sin_receta else ""
+        raise ToolError(f"No se ha encontrado ningún medicamento{detalle} para «{nombre_o_principio_activo}» en CIMA.")
     # Primero los que empiezan por la consulta (CIMA busca por subcadena: "omeprazol"
     # también trae "esomeprazol") y, dentro de eso, los comercializados.
     q = nombre_o_principio_activo.strip().lower()

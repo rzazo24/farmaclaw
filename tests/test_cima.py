@@ -35,6 +35,28 @@ def test_partir_texto_corto_una_parte():
     assert s._partir("corto") == ["corto"]
 
 
+def test_filtro_sin_receta_y_comercializados():
+    meds = [{"nregistro": "1", "receta": True, "comerc": True},
+            {"nregistro": "2", "receta": False, "comerc": True},
+            {"nregistro": "3", "receta": False, "comerc": False},
+            {"nregistro": "4", "comerc": True}]                     # sin el campo: no se da por sin receta
+    assert [m["nregistro"] for m in s.filtrar(meds, solo_sin_receta=True)] == ["2", "3"]
+    assert [m["nregistro"] for m in s.filtrar(meds, True, True)] == ["2"]
+    assert len(s.filtrar(meds)) == 4
+
+
+def test_sin_receta_se_pide_a_la_api(monkeypatch):
+    pedidos = []
+
+    def get_falso(path, params=None):
+        pedidos.append((path, params))
+        return {"resultados": [{"nregistro": "9", "nombre": "OMEPRAZOL X 20 MG", "receta": False, "comerc": True}]}
+    monkeypatch.setattr(s, "_get", get_falso)
+    r = s.buscar_medicamento("omeprazol", solo_comercializados=True, solo_sin_receta=True)
+    assert all(p == {**p, "receta": 0, "comerc": 1} for _, p in pedidos) and len(pedidos) == 2
+    assert r["medicamentos"][0]["necesita_receta"] is False
+
+
 # ---------- Con red (API de CIMA) ----------
 
 
@@ -51,6 +73,15 @@ def test_buscar_principio_activo_incluye_marcas():
 def test_buscar_ordena_primero_los_que_empiezan_por_la_consulta():
     r = s.buscar_medicamento("omeprazol", solo_comercializados=True)
     assert r["medicamentos"][0]["nombre"].startswith("OMEPRAZOL")
+
+
+@pytest.mark.red
+def test_buscar_sin_receta_omeprazol():
+    todos = s.buscar_medicamento("omeprazol", solo_comercializados=True)
+    sin = s.buscar_medicamento("omeprazol", solo_comercializados=True, solo_sin_receta=True)
+    assert sin["total"] < todos["total"]
+    assert sin["medicamentos"] and all(m["necesita_receta"] is False for m in sin["medicamentos"])
+    assert any(m["necesita_receta"] for m in todos["medicamentos"])
 
 
 @pytest.mark.red
