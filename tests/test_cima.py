@@ -57,6 +57,59 @@ def test_sin_receta_se_pide_a_la_api(monkeypatch):
     assert r["medicamentos"][0]["necesita_receta"] is False
 
 
+def _cima_paginada(monkeypatch, totales: dict, primero_en_pagina2: str | None = None):
+    """Simula /medicamentos con páginas de 200: totales = {"nombre": N, "practiv1": M}."""
+    pedidas = []
+
+    def get_falso(path, params=None):
+        campo = "nombre" if "nombre" in params else "practiv1"
+        pagina, total = params["pagina"], totales[campo]
+        pedidas.append((campo, pagina))
+        inicio = (pagina - 1) * 200
+        if inicio >= total:
+            return {"totalFilas": 0, "pagina": pagina, "tamanioPagina": 200, "resultados": []}
+        filas = [{"nregistro": f"{campo}{i}", "nombre": f"ZETA {campo} {i:04d}", "comerc": True}
+                 for i in range(inicio, min(total, inicio + 200))]
+        if primero_en_pagina2 and pagina == 2:
+            filas[0]["nombre"] = primero_en_pagina2
+        return {"totalFilas": total, "pagina": pagina, "tamanioPagina": 200, "resultados": filas}
+    monkeypatch.setattr(s, "_get", get_falso)
+    return pedidas
+
+
+def test_lee_varias_paginas_y_ordena_sobre_todo(monkeypatch):
+    pedidas = _cima_paginada(monkeypatch, {"nombre": 10, "practiv1": 350}, primero_en_pagina2="OMEPRAZOL X 20 MG")
+    r = s.buscar_medicamento("omeprazol")
+    assert pedidas == [("nombre", 1), ("practiv1", 1), ("practiv1", 2)]
+    assert r["leidos"] == 360 and r["total_en_cima"] == {"por_nombre": 10, "por_principio_activo": 350}
+    assert r["medicamentos"][0]["nombre"] == "OMEPRAZOL X 20 MG"   # estaba en la página 2: se ordena sobre todo
+    assert r["aviso"].startswith("Mostrando 15 de 360.") and "Hay más resultados" not in r["aviso"]
+
+
+def test_para_en_el_limite_y_lo_avisa(monkeypatch):
+    pedidas = _cima_paginada(monkeypatch, {"nombre": 0, "practiv1": 1000})
+    r = s.buscar_medicamento("paracetamol")
+    assert [p for p in pedidas if p[0] == "practiv1"] == [("practiv1", 1), ("practiv1", 2)]   # 400 = 2 páginas
+    assert r["leidos"] == s.LIMITE_POR_CAMPO == 400
+    assert r["total_en_cima"]["por_principio_activo"] == 1000
+    assert "Hay más resultados en CIMA" in r["aviso"]
+
+
+def test_sin_aviso_si_se_ve_todo(monkeypatch):
+    _cima_paginada(monkeypatch, {"nombre": 4, "practiv1": 6})
+    r = s.buscar_medicamento("almagato")
+    assert r["total"] == 10 and r["leidos"] == 10 and "aviso" not in r
+
+
+def test_aviso_busqueda():
+    assert s.aviso_busqueda(15, False) is None
+    assert s.aviso_busqueda(16, False).startswith("Mostrando 15 de 16")
+    assert "Hay más resultados" in s.aviso_busqueda(3, True)
+    assert s.aviso_busqueda(20, False).endswith("o usa solo_comercializados / solo_sin_receta.")
+    assert s.aviso_busqueda(20, False, comercializados=True).endswith("o usa solo_sin_receta.")
+    assert s.aviso_busqueda(20, False, True, True).endswith("(nombre comercial, dosis, forma farmacéutica).")
+
+
 # ---------- Con red (API de CIMA) ----------
 
 
@@ -73,6 +126,14 @@ def test_buscar_principio_activo_incluye_marcas():
 def test_buscar_ordena_primero_los_que_empiezan_por_la_consulta():
     r = s.buscar_medicamento("omeprazol", solo_comercializados=True)
     assert r["medicamentos"][0]["nombre"].startswith("OMEPRAZOL")
+
+
+@pytest.mark.red
+def test_buscar_lee_todas_las_paginas_omeprazol():
+    r = s.buscar_medicamento("omeprazol")
+    assert r["total_en_cima"]["por_principio_activo"] > 200      # más de una página en CIMA
+    assert r["leidos"] > 200                                        # y se han leído más de 200 (1 página)
+    assert r["mostrados"] == 15 and r["aviso"].startswith("Mostrando 15 de")
 
 
 @pytest.mark.red

@@ -33,7 +33,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - CIMA: `/psuministro?nregistro=` ignora el parámetro; hay que ir por presentación: `/psuministro/{cn}`.
 - CIMA: una sección inexistente devuelve 200 con `{"error": ...}`.
 - CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol"). Por nombre no salen las marcas (Depakine): se busca siempre por nombre Y por principio activo (`practiv1`, que entiende "valproato" = "valproico").
-- CIMA: `/medicamentos` pagina los resultados y solo se lee la primera página: los filtros (`comerc=1`, `receta=0`) se pasan a la API, no se aplican después en Python.
+- CIMA: `/medicamentos` pagina de 200 en 200 (`pagina`, `totalFilas`; ignora `tamanioPagina`). Se leen páginas hasta 400 resultados por campo (nombre y principio activo) y `buscar_medicamento` avisa si hay más de los 15 mostrados o se llega al límite. Los filtros (`comerc=1`, `receta=0`) se pasan a la API para que quepan más resultados útiles en ese límite.
 - CIMA: las fechas son medianoche de Madrid en ms; convertir con `Europe/Madrid`, no UTC (saldría el día anterior).
 - PubMed: artículos recientes pueden no tener MeSH todavía.
 - PMC (texto completo): PMID → PMC con `elink` (`linkname=pubmed_pmc`); el conversor `idconv` se ha movido a pmc.ncbi.nlm.nih.gov y no encuentra muchos artículos. `efetch db=pmc` da JATS XML; algunas editoriales (p. ej. Cochrane) no permiten el XML completo: viene sin `<body>` y con un comentario "does not allow downloading of the full text".

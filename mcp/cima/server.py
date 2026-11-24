@@ -128,12 +128,27 @@ def _medicamento(nregistro: str) -> dict:
     return data
 
 
-def _buscar(texto: str, filtros: dict | None = None) -> list[dict]:
-    """Busca por código nacional o nº de registro (si son dígitos), o por nombre comercial y principio activo.
+LIMITE_POR_CAMPO = 400  # resultados que se leen como mucho por búsqueda (nombre y principio activo)
 
-    filtros: parámetros extra de /medicamentos (comerc=1, receta=0…). Se aplican en la API porque
-    CIMA pagina los resultados y aquí solo se lee la primera página: filtrar después podría dejar
-    fuera lo buscado (p. ej. 14 omeprazoles sin receta entre 173)."""
+
+def _paginas(params: dict) -> tuple[list[dict], int]:
+    """Lee /medicamentos página a página. La API pagina de 200 en 200 y no deja cambiar el tamaño
+    (ignora tamanioPagina, comprobado); una página fuera de rango devuelve totalFilas 0.
+    Devuelve (resultados, total que da la API), con como mucho LIMITE_POR_CAMPO resultados."""
+    leidos: list[dict] = []
+    total, pagina = 0, 1
+    while True:
+        data = _get("/medicamentos", {**params, "pagina": pagina}) or {}
+        filas = data.get("resultados") or []
+        total = max(total, data.get("totalFilas") or 0)
+        leidos += filas
+        if not filas or len(leidos) >= total or len(leidos) >= LIMITE_POR_CAMPO:
+            return leidos[:LIMITE_POR_CAMPO], total
+        pagina += 1
+
+
+def _buscar_detalle(texto: str, filtros: dict | None = None) -> tuple[list[dict], dict]:
+    """Como _buscar, pero devuelve también cuántos hay en CIMA y cuántos se han leído."""
     texto = texto.strip()
     codigo = texto.split(".")[0]  # el CN de la caja puede llevar dígito de control: "712729.8"
     if codigo.isdigit():
@@ -142,16 +157,25 @@ def _buscar(texto: str, filtros: dict | None = None) -> list[dict]:
         for p in params:
             med = _get("/medicamento", p)
             if med:
-                return [med]
-        return []
+                return [med], {"total_en_cima": {"por_codigo": 1}, "limite_alcanzado": False}
+        return [], {"total_en_cima": {"por_codigo": 0}, "limite_alcanzado": False}
     # Siempre ambas búsquedas: por nombre solo salen los genéricos que llevan el principio
     # activo en el nombre ("ácido valproico") y se perderían las marcas (Depakine).
+    # Los filtros (comerc=1, receta=0…) van a la API: así caben más resultados útiles en el límite.
     vistos: dict[str, dict] = {}
-    for campo in ("nombre", "practiv1"):
-        data = _get("/medicamentos", {campo: texto, **(filtros or {})}) or {}
-        for m in data.get("resultados", []):
+    totales, limite = {}, False
+    for campo, etiqueta in (("nombre", "por_nombre"), ("practiv1", "por_principio_activo")):
+        filas, total = _paginas({campo: texto, **(filtros or {})})
+        totales[etiqueta] = total
+        limite = limite or total > len(filas)
+        for m in filas:
             vistos.setdefault(m["nregistro"], m)
-    return list(vistos.values())
+    return list(vistos.values()), {"total_en_cima": totales, "limite_alcanzado": limite}
+
+
+def _buscar(texto: str, filtros: dict | None = None) -> list[dict]:
+    """Busca por código nacional o nº de registro (si son dígitos), o por nombre comercial y principio activo."""
+    return _buscar_detalle(texto, filtros)[0]
 
 
 def filtrar(medicamentos: list[dict], solo_comercializados: bool = False, solo_sin_receta: bool = False) -> list[dict]:
@@ -189,7 +213,9 @@ def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: boo
     farmacéutica, síntomas menores). Sus prospectos dicen cuándo consultar al médico.
 
     Devuelve una lista breve (máx. 15) con nregistro, nombre, laboratorio,
-    si está comercializado y si tiene problemas de suministro. Usa el
+    si está comercializado y si tiene problemas de suministro, además de cuántos hay
+    en CIMA ("total_en_cima"), cuántos se han leído ("leidos") y un "aviso" si hay más de
+    los mostrados: en ese caso, si no aparece lo buscado, afina la búsqueda. Usa el
     nregistro para consultar la ficha técnica o el prospecto.
     """
     filtros = {}
@@ -197,7 +223,8 @@ def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: boo
         filtros["comerc"] = 1
     if solo_sin_receta:
         filtros["receta"] = 0
-    resultados = filtrar(_buscar(nombre_o_principio_activo, filtros), solo_comercializados, solo_sin_receta)
+    leidos, meta = _buscar_detalle(nombre_o_principio_activo, filtros)
+    resultados = filtrar(leidos, solo_comercializados, solo_sin_receta)
     if not resultados:
         detalle = " sin receta" if solo_sin_receta else ""
         raise ToolError(f"No se ha encontrado ningún medicamento{detalle} para «{nombre_o_principio_activo}» en CIMA.")
@@ -205,12 +232,33 @@ def buscar_medicamento(nombre_o_principio_activo: str, solo_comercializados: boo
     # también trae "esomeprazol") y, dentro de eso, los comercializados.
     q = nombre_o_principio_activo.strip().lower()
     resultados.sort(key=lambda m: (not m["nombre"].lower().startswith(q), not m.get("comerc"), m["nombre"]))
-    return {
+    salida = {
         "total": len(resultados),
         "mostrados": min(len(resultados), MAX_RESULTADOS),
+        "leidos": len(leidos),
+        "total_en_cima": meta["total_en_cima"],
         "medicamentos": [_resumen(m) for m in resultados[:MAX_RESULTADOS]],
-        "fuente": f"https://cima.aemps.es/cima/publico/lista.html",
+        "fuente": "https://cima.aemps.es/cima/publico/lista.html",
     }
+    if aviso := aviso_busqueda(len(resultados), meta["limite_alcanzado"], solo_comercializados, solo_sin_receta):
+        salida["aviso"] = aviso
+    return salida
+
+
+def aviso_busqueda(total: int, limite_alcanzado: bool, comercializados: bool = False,
+                   sin_receta: bool = False) -> str | None:
+    """Aviso para el agente cuando no está viendo todos los resultados (sugiere solo filtros no usados)."""
+    partes = []
+    if total > MAX_RESULTADOS:
+        filtros = [f for f, usado in (("solo_comercializados", comercializados), ("solo_sin_receta", sin_receta))
+                   if not usado]
+        extra = f" o usa {' / '.join(filtros)}" if filtros else ""
+        partes.append(f"Mostrando {MAX_RESULTADOS} de {total}. Si no aparece lo que buscas, afina la búsqueda "
+                      f"(nombre comercial, dosis, forma farmacéutica){extra}.")
+    if limite_alcanzado:
+        partes.append(f"Hay más resultados en CIMA de los que se leen ({LIMITE_POR_CAMPO} por búsqueda): "
+                      "afina la búsqueda para no dejar fuera lo que buscas.")
+    return " ".join(partes) or None
 
 
 def _partir(texto: str) -> list[str]:
