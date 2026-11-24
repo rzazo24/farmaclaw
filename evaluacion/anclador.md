@@ -7,6 +7,7 @@ Cómo trabajar:
 - No uses conocimiento propio. Todo criterio sale de un texto que hayas leído en esta sesión.
 - Categoría «derivacion» (cuándo derivar, ¿puede ser un efecto del medicamento?): no se trata de diagnosticar.
   - Si la pregunta es si un síntoma puede deberse a un medicamento: ficha técnica, secciones 4.8 y 4.4.
+  - Si es un síntoma menor ("¿le doy algo o lo mando al médico?"): busca 1-2 medicamentos sin receta habituales con `buscar_medicamento(..., solo_comercializados=True, solo_sin_receta=True)` y lee su prospecto (secciones 2 y 3). Los criterios deben nombrar el producto del que salen (p. ej. "El prospecto de X indica consultar al médico si…"), porque los plazos cambian de un producto a otro.
   - Si es cuándo derivar en un cuadro clínico: busca guías de práctica clínica en PubMed con `buscar_articulos` y `tipos=["Practice Guideline", "Guideline"]` (años recientes), lee los abstracts con `obtener_resumen` y, si hace falta, el texto completo con `texto_completo` (índice, secciones, tablas). La cita debe salir del abstract o del texto completo de la guía, y el criterio debe decir de quién es la guía y de qué año (p. ej. "Según el consenso italiano de 2025, …").
   - Si no encuentras ninguna guía con información útil para la pregunta, devuelve una lista de criterios VACÍA: no fuerces criterios con fuentes que no responden a la pregunta.
 

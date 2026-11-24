@@ -17,6 +17,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - Cada afirmación clínica con cita y enlace: [CIMA: nombre, sección X] o [PMID: 12345678]. Nada de mecanismos o datos sin fuente; los consejos prácticos van marcados como "Consejo práctico (no procede de las fuentes)".
 - Prioridad: ficha técnica CIMA > guías de práctica clínica, metaanálisis y revisiones sistemáticas > ensayos > casos clínicos (solo apoyo).
 - Dudas de diagnóstico: no diagnostica; aporta, con fuentes, si un síntoma puede ser un efecto adverso (4.8), cuándo derivar (ficha/prospecto) y qué dicen las guías (PubMed, tipos Practice Guideline/Guideline).
+- Síntomas menores (¿tratar o derivar?): medicamentos sin receta (`buscar_medicamento(solo_sin_receta=True)`, filtro `receta=0` de la API) y sus prospectos (secciones 2 y 3): criterios de derivación tal cual, por producto, sin generalizar ni elegir tratamiento.
 - Interacciones: leer la 4.5 de ambos fármacos; mecanismo, relevancia y manejo; aviso de contrastar con Bot PLUS.
 - Formato móvil: respuesta breve (2-4 frases), detalle y referencias.
 - Nunca pedir ni guardar datos identificativos de pacientes.
@@ -32,6 +33,7 @@ Para cualquier pregunta farmacéutica, delega en el agente **research** (`.claud
 - CIMA: `/psuministro?nregistro=` ignora el parámetro; hay que ir por presentación: `/psuministro/{cn}`.
 - CIMA: una sección inexistente devuelve 200 con `{"error": ...}`.
 - CIMA: la búsqueda por nombre es por subcadena ("omeprazol" trae "esomeprazol"). Por nombre no salen las marcas (Depakine): se busca siempre por nombre Y por principio activo (`practiv1`, que entiende "valproato" = "valproico").
+- CIMA: `/medicamentos` pagina los resultados y solo se lee la primera página: los filtros (`comerc=1`, `receta=0`) se pasan a la API, no se aplican después en Python.
 - CIMA: las fechas son medianoche de Madrid en ms; convertir con `Europe/Madrid`, no UTC (saldría el día anterior).
 - PubMed: artículos recientes pueden no tener MeSH todavía.
 - PMC (texto completo): PMID → PMC con `elink` (`linkname=pubmed_pmc`); el conversor `idconv` se ha movido a pmc.ncbi.nlm.nih.gov y no encuentra muchos artículos. `efetch db=pmc` da JATS XML; algunas editoriales (p. ej. Cochrane) no permiten el XML completo: viene sin `<body>` y con un comentario "does not allow downloading of the full text".
