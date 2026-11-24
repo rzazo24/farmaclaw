@@ -580,16 +580,16 @@ casos:
       - {herramienta: buscar_medicamento}
       - {herramienta: prospecto_seccion, seccion: ['2', '3']}
     debe_mencionar:
-      - criterio: El prospecto de Omeprazol Cinfalab 20 mg indica que no se tome más de 14 días sin consultar al médico.
+      - criterio: El prospecto del omeprazol sin receta que lea indica que no se tome más de 14 días sin consultar al médico.
         cita: No tome Omeprazol cinfalab durante más de 14 días sin consultar a su médico. Si no experimenta alivio, o siente que sus síntomas empeoran, consulte a su médico.
         fuente: https://cima.aemps.es/cima/dochtml/p/83628/P_83628.html
-      - criterio: El prospecto de Omeprazol Cinfalab indica consultar al médico si hay ardor de estómago o indigestión continuos desde hace 4 semanas o más.
+      - criterio: El prospecto del omeprazol sin receta que lea indica consultar al médico si hay ardor de estómago o indigestión continuos desde hace 4 semanas o más.
         cita: Padece continuamente indigestión o ardor de estómago desde hace 4 semanas o más.
         fuente: https://cima.aemps.es/cima/dochtml/p/83628/P_83628.html
-      - criterio: El prospecto de Omeprazol Cinfalab indica consultar al médico inmediatamente si adelgaza mucho sin motivo aparente y tiene problemas para tragar.
+      - criterio: El prospecto del omeprazol sin receta que lea indica consultar al médico inmediatamente si adelgaza mucho sin motivo aparente y tiene problemas para tragar.
         cita: Adelgaza mucho sin motivo aparente y tiene problemas para tragar.
         fuente: https://cima.aemps.es/cima/dochtml/p/83628/P_83628.html
-      - criterio: El prospecto de Omeprazol Cinfalab indica consultar al médico si la persona es mayor de 55 años y sus síntomas son nuevos o han cambiado.
+      - criterio: El prospecto del omeprazol sin receta que lea indica consultar al médico si la persona es mayor de 55 años y sus síntomas son nuevos o han cambiado.
         cita: Es mayor de 55 años de edad y sus síntomas han cambiado recientemente o son nuevos.
         fuente: https://cima.aemps.es/cima/dochtml/p/83628/P_83628.html
     no_debe:
